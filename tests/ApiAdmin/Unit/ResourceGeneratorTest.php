@@ -18,7 +18,8 @@ class ResourceGeneratorTest extends TestCase
     {
         parent::setUp();
 
-        config(['api-admin.resources_path' => sys_get_temp_dir().'/moonshine-test-resources']);
+        $path = sys_get_temp_dir().'/moonshine-test-resources-'.bin2hex(random_bytes(8));
+        config(['api-admin.resources_path' => $path, 'api-admin.specs_path' => $path.'/.specs']);
     }
 
     protected function tearDown(): void

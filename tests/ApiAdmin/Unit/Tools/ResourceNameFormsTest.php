@@ -49,7 +49,7 @@ final class ResourceNameFormsTest extends TestCase
     {
         parent::setUp();
 
-        $this->service = 'namesvc'.substr(str_replace('.', '', uniqid('', true)), 0, 8);
+        $this->service = 'namesvc'.bin2hex(random_bytes(8));
 
         config(["api-admin.services.{$this->service}" => [
             'config' => "App\\MoonShine\\ApiAdmin\\Configs\\{$this->service}Config",

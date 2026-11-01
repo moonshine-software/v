@@ -468,8 +468,8 @@ class AbstractRestResourceTest extends TestCase
         $this->assertFalse($paginator->isSimple(), 'total+last_page present → full paginator');
         $this->assertSame(142, $paginator->getTotal());
         $this->assertSame(7, $paginator->getLastPage());
-        $this->assertSame('https://api.gh.test/v1/issues?page=2', $paginator->getNextPageUrl());
-        $this->assertSame('https://api.gh.test/v1/issues?page=1', $paginator->getFirstPageUrl());
+        $this->assertSame(request()->fullUrlWithQuery(['page' => 2]), $paginator->getNextPageUrl());
+        $this->assertSame(request()->fullUrlWithQuery(['page' => 1]), $paginator->getFirstPageUrl());
     }
 
     public function test_link_header_pagination_falls_back_to_simple_without_last_rel(): void
@@ -517,7 +517,7 @@ class AbstractRestResourceTest extends TestCase
         $this->assertInstanceOf(PaginatorContract::class, $paginator);
         $this->assertTrue($paginator->isSimple(), 'missing rel="last" → simple mode');
         $this->assertNull($paginator->getTotal());
-        $this->assertSame('https://api.gl.test/v1/mr?page=2', $paginator->getNextPageUrl());
+        $this->assertSame(request()->fullUrlWithQuery(['page' => 2]), $paginator->getNextPageUrl());
     }
 
     public function test_list_emits_flat_filter_format_when_configured(): void

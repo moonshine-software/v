@@ -212,6 +212,18 @@ snake_case keys, including `per_page_param_name: "size"` and
 `zero_based_pages: true`. UI/MCP page 1 sends `page=0&size=25` upstream; response
 `number: 0` becomes page 1 in the panel.
 
+## Link-header pagination
+
+Set `response_mapping.pagination_type` to `link_header` for APIs that return
+`Link: <...page=2>; rel="next"` navigation. An optional `total_header` maps a
+record-count header such as `X-Total-Count`; without `rel="last"`, the panel uses
+previous/next navigation.
+
+Only the page number is read from upstream links. Browser links stay inside the
+panel, keep the current filters, search and sort, and use the service's server-side
+authentication. Upstream hosts, paths and other query parameters are not copied
+into browser navigation. Missing or invalid page numbers produce no link.
+
 ## Cross-Service Relations
 
 Relation fields normally use the parent resource service. Add

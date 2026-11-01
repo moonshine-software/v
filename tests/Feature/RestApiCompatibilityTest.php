@@ -12,6 +12,7 @@ use App\ApiAdmin\Resources\AbstractRestResource;
 use App\ApiAdmin\ServiceConfig\ResponseMapping;
 use App\ApiAdmin\ServiceConfig\ServiceConfig;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\Request as BrowserRequest;
 use Illuminate\Support\Facades\Http;
 use MoonShine\Contracts\Core\DependencyInjection\CoreContract;
 use MoonShine\Contracts\Core\Paginator\PaginatorContract;
@@ -117,6 +118,78 @@ final class RestApiCompatibilityTest extends TestCase
             Http::assertSent(static fn (Request $request): bool => $request['page'] === $page - 1
                 && $request['size'] === 20 && ! isset($request['per_page']));
         }
+    }
+
+    /** @return iterable<string, array{int, bool}> */
+    public static function linkHeaderPages(): iterable
+    {
+        foreach ([false, true] as $withLastPage) {
+            foreach ([1, 2, 3] as $page) {
+                yield ($withLastPage ? 'numbered' : 'simple').' page '.$page => [$page, $withLastPage];
+            }
+        }
+    }
+
+    #[DataProvider('linkHeaderPages')]
+    public function test_link_header_navigation_stays_in_the_panel_and_preserves_request_context(int $page, bool $withLastPage): void
+    {
+        $links = ['<https://upstream.test/items?page=1&api_key=upstream-secret>; rel="first"'];
+        if ($page > 1) {
+            $links[] = '<https://upstream.test/items?page='.($page - 1).'&api_key=upstream-secret>; rel="prev"';
+        }
+        if ($page < 3) {
+            $links[] = '<https://upstream.test/items?page='.($page + 1).'&api_key=upstream-secret>; rel="next"';
+        }
+        if ($withLastPage) {
+            $links[] = '<https://upstream.test/items?page=3&api_key=upstream-secret>; rel="last"';
+        }
+        Http::fake(['*' => Http::response(['data' => [['id' => $page]]], headers: ['Link' => implode(', ', $links), 'X-Total-Count' => '3'])]);
+        $context = ['sort' => '-id', 'search' => 'some words', 'filter' => ['status' => 'published'], '_component_name' => 'items'];
+        app()->instance('request', BrowserRequest::create('https://panel.test/admin/items', parameters: [...$context, 'page' => $page]));
+        $mapping = new ResponseMapping(paginationType: 'link_header', totalHeader: 'X-Total-Count');
+        $paginator = ResourceRequestContext::seed($this->resource($mapping), ['page' => $page], static fn ($resource) => $resource->getItems());
+
+        $this->assertInstanceOf(Paginator::class, $paginator);
+        $this->assertSame(! $withLastPage, $paginator->isSimple());
+        $this->assertSame($page, $paginator->getCurrentPage());
+        $this->assertSame($withLastPage ? 3 : null, $paginator->getLastPage());
+        $this->assertSame(3, $paginator->getTotal());
+        $this->assertSame($page === 3 ? null : request()->fullUrlWithQuery(['page' => $page + 1]), $paginator->getNextPageUrl());
+        $this->assertSame($page === 1 ? null : request()->fullUrlWithQuery(['page' => $page - 1]), $paginator->getPrevPageUrl());
+        $this->assertSame(request()->fullUrlWithQuery(['page' => 1]), $paginator->getFirstPageUrl());
+        $this->assertSame($withLastPage ? request()->fullUrlWithQuery(['page' => 3]) : null, $paginator->getLastPageUrl());
+        $this->assertStringNotContainsString('upstream.test', (string) $paginator);
+        $this->assertStringNotContainsString('upstream-secret', (string) $paginator);
+        $paginator->setPath('https://panel.test/component');
+        if ($page < 3) {
+            $nextUrl = $paginator->getNextPageUrl();
+            $this->assertNotNull($nextUrl);
+            $this->assertStringStartsWith('https://panel.test/component?', $nextUrl);
+            parse_str((string) parse_url($nextUrl, PHP_URL_QUERY), $query);
+            $this->assertSame([...$context, 'page' => (string) ($page + 1)], $query);
+        }
+        Http::assertSent(static fn (Request $request): bool => $request['page'] === $page);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function invalidLinkPages(): iterable
+    {
+        yield 'missing' => ['https://upstream.test/items'];
+        yield 'array' => ['https://upstream.test/items?page[]=2'];
+        yield 'zero' => ['https://upstream.test/items?page=0'];
+        yield 'negative' => ['https://upstream.test/items?page=-1'];
+        yield 'not a number' => ['https://upstream.test/items?page=invalid'];
+    }
+
+    #[DataProvider('invalidLinkPages')]
+    public function test_invalid_link_header_pages_do_not_render_external_navigation(string $url): void
+    {
+        Http::fake(['*' => Http::response(['data' => []], headers: ['Link' => '<'.$url.'>; rel="next"'])]);
+        $paginator = $this->resource(new ResponseMapping(paginationType: 'link_header'))->getItems();
+
+        $this->assertInstanceOf(Paginator::class, $paginator);
+        $this->assertNull($paginator->getNextPageUrl());
+        $this->assertStringNotContainsString('upstream.test', (string) $paginator);
     }
 
     public function test_laravel_pagination_keeps_one_based_pages_and_per_page(): void

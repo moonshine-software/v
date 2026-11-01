@@ -162,6 +162,10 @@ sessions still require upstream validation, and actual expired state is rejected
 
 `npm run test:e2e` runs Playwright in the installed Chrome against an isolated copy of the files git publishes: its own SQLite, its own example API ports and generation through MCP. The developer's local services are not involved and do not change. Specs live in `tests/e2e/specs`, setup in `tests/e2e/global-setup.mjs` and `scripts/e2e-provision.php`.
 
+Generator tests must use independent temporary resource/spec roots. Test service
+identifiers need random suffixes; the timestamp portion of `uniqid()` is shared
+by concurrent processes and is not a unique identifier.
+
 Full rationale and individual fix commands: `.ai-factory/RULES.md`.
 
 REST save diagnostics log payload keys only, never values. Instructor completion
@@ -299,6 +303,11 @@ UI/MCP pages remain one-based. The Django preset maps body `next`/`previous`
 navigation and uses a simple pager when last-page metadata is absent. Probe and
 Instructor discovery must emit the same mapping. List-strategy item reads require
 an exact primary-key match and must never fall back to the first row.
+
+Link-header pagination reads only positive `page` numbers from upstream URLs and
+builds panel URLs with the current filter/search/sort query. Never emit upstream
+hosts, paths or credentials in browser pagination links. Feature coverage lives
+in `RestApiCompatibilityTest`; Chrome covers simple and numbered Link navigation.
 
 `response_mapping` on `register_service` input accepts three keys: `filter_param_name` (default `filter`), `sort_param_name` (default `sort`), `search_param_name` (default `search`). The combination `filter_format: nested + filter_param_name: filters` is the Laravel + Spatie Query Builder default (`?filters[status]=todo`). Without these keys the filter, sort and search controls could be silently ignored by the upstream and look like "filters are broken".
 

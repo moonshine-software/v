@@ -40,7 +40,7 @@ final class AddFieldToolTest extends TestCase
     {
         parent::setUp();
 
-        $this->serviceSlug = 'addfsvc'.substr(str_replace('.', '', uniqid('', true)), 0, 8);
+        $this->serviceSlug = 'addfsvc'.bin2hex(random_bytes(8));
 
         config(["api-admin.services.{$this->serviceSlug}" => [
             'config' => "App\\MoonShine\\ApiAdmin\\Configs\\{$this->serviceSlug}Config",

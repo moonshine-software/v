@@ -8,6 +8,8 @@ First public version.
 
 ### Fixed
 
+- Link-header pagination keeps navigation inside the panel and preserves filters, search and sorting without forwarding upstream URL credentials.
+- Concurrent generator and field-tool test runs use independent temporary resources and spec identifiers.
 - REST form saves log payload keys without exposing passwords or nested secrets.
 - Hosted browser onboarding links to the generated panel within the current tenant.
 - `make optimize` preserves live service and panel discovery by caching only views.

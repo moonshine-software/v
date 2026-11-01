@@ -42,6 +42,12 @@ if (! is_string($rotationToken) || $rotationToken === '') {
 
 $steps = [
     ['register_service', [
+        'name' => 'links', 'panel' => 'links-admin', 'title' => 'Link Pagination',
+        'base_url' => "http://127.0.0.1:{$ports['links']}", 'api_key' => 'link-pagination-token',
+        'health_path' => '/health', 'response_format' => 'custom',
+        'response_mapping' => ['data_key' => 'data', 'pagination_type' => 'link_header', 'total_header' => 'X-Total-Count'],
+    ]],
+    ['register_service', [
         'name' => 'blog',
         'base_url' => "http://127.0.0.1:{$ports['blog']}/v1",
         'panel' => 'blog-admin',
@@ -191,6 +197,15 @@ $steps = [
         'search' => ['slug', 'name'],
     ]],
 ];
+
+foreach (['simple', 'numbered'] as $name) {
+    $steps[] = ['create_resource', [
+        'service' => 'links', 'name' => $name, 'endpoint' => '/'.$name, 'actions' => ['view'],
+        'fields' => [['column' => 'id', 'type' => 'id', 'methods' => ['sortable']], ['column' => 'title', 'type' => 'text']],
+        'search' => ['title'],
+        'filters' => [['column' => 'status', 'type' => 'select', 'options' => $selectOptions]],
+    ]];
+}
 
 foreach ($steps as [$tool, $params]) {
     $result = $server->executeTool($tool, $params);

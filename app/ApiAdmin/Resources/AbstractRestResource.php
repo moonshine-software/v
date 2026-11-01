@@ -731,6 +731,14 @@ abstract class AbstractRestResource extends CrudResource
         $total = is_string($totalHeader) && $totalHeader !== '' && ctype_digit($totalHeader) ? (int) $totalHeader : null;
 
         $simple = $lastPage === null;
+        // Link headers describe upstream pages; browser navigation must use the panel's authenticated proxy.
+        $pageUrl = function (string $rel) use ($links): ?string {
+            $page = $this->queryParamFromUrl($links[$rel] ?? '', 'page');
+
+            return ctype_digit($page) && (int) $page > 0
+                ? request()->fullUrlWithQuery(['page' => (int) $page])
+                : null;
+        };
 
         return new \MoonShine\Core\Paginator\Paginator(
             path: \Illuminate\Pagination\Paginator::resolveCurrentPath(),
@@ -744,10 +752,10 @@ abstract class AbstractRestResource extends CrudResource
             simple: $simple,
             total: $total,
             lastPage: $lastPage,
-            firstPageUrl: $links['first'] ?? null,
-            prevPageUrl: $links['prev'] ?? null,
-            lastPageUrl: $links['last'] ?? null,
-            nextPageUrl: $links['next'] ?? null,
+            firstPageUrl: $pageUrl('first'),
+            prevPageUrl: $pageUrl('prev'),
+            lastPageUrl: $pageUrl('last'),
+            nextPageUrl: $pageUrl('next'),
             pageName: 'page',
             translates: [
                 'previous' => 'moonshine::pagination.previous',
