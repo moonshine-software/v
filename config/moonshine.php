@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\ApiAdmin\Auth\EnsureDelegatedPanelState;
 use App\ApiAdmin\Http\Middleware\EnsureTenantMembership;
-use App\ApiAdmin\Http\Middleware\PanelAuthenticate;
 use App\MoonShine\ApiAdmin\Layouts\AdminHubLayout;
 use App\MoonShine\ApiAdmin\Pages\AdminHubPage;
 use App\MoonShine\ApiAdmin\Pages\InstructorPage;
@@ -21,6 +20,7 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 use MoonShine\ColorManager\Palettes\PurplePalette;
 use MoonShine\Crud\Forms\FiltersForm;
 use MoonShine\Laravel\Exceptions\MoonShineNotFoundException;
+use MoonShine\Laravel\Http\Middleware\Authenticate;
 use MoonShine\Laravel\Http\Middleware\ChangeLocale;
 use MoonShine\Laravel\Models\MoonshineUser;
 use MoonShine\Laravel\Pages\ErrorPage;
@@ -106,7 +106,7 @@ return [
         'guard' => 'moonshine',
         'model' => MoonshineUser::class,
         'middleware' => [
-            PanelAuthenticate::class,
+            Authenticate::class,
             EnsureDelegatedPanelState::class,
         ],
         'pipelines' => [],

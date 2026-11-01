@@ -443,7 +443,7 @@ An agent reads them once per session and does not parse the tool schema on every
 
 ### Panel sessions
 
-The hub and regular panels use the `moonshine` guard. Panels with a separate sign-in (`admin_login: true`, `delegated_token`, `oauth2_authorization_code`) use their own guard `api-admin-upstream-{panel}`, so signing in to such a panel or losing its state does not affect the hub session, and upstream credentials give no access to the hub or other panels. Registration: `ApiAdminServiceProvider::registerUpstreamGuard`. Laravel's middleware priority runs authentication before `MultiPanelMiddleware`, so the panel guard is applied by `App\ApiAdmin\Http\Middleware\PanelAuthenticate`. Coverage: `DelegatedPanelStateTest`.
+The hub and regular panels use the `moonshine` guard. Panels with a separate sign-in (`admin_login: true`, `delegated_token`, `oauth2_authorization_code`) use their own guard `api-admin-upstream-{panel}`, so signing in to such a panel or losing its state does not affect the hub session, and upstream credentials give no access to the hub or other panels. Registration: `ApiAdminServiceProvider::registerUpstreamGuard`. `moonshine/multi-panels` runs `MultiPanelMiddleware` before authentication, so MoonShine's `Authenticate` checks the panel guard. Coverage: `DelegatedPanelStateTest`.
 
 ### Cross-service relation specs
 

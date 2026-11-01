@@ -7,19 +7,22 @@ namespace Tests\Feature;
 use App\ApiAdmin\Auth\EnsureDelegatedPanelState;
 use App\ApiAdmin\Auth\SessionState;
 use App\ApiAdmin\Auth\UpstreamUserProvider;
-use App\ApiAdmin\Http\Middleware\PanelAuthenticate;
 use App\ApiAdmin\Providers\ApiAdminServiceProvider;
 use App\ApiAdmin\Tenancy\TenantKeyBuilder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Pipeline\Pipeline;
 use Illuminate\Routing\Route;
+use Illuminate\Routing\Router;
 use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Session\Store;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use MoonShine\Contracts\Core\DependencyInjection\ConfiguratorContract;
+use MoonShine\Laravel\Http\Middleware\Authenticate;
 use MoonShine\Laravel\Models\MoonshineUser;
+use MoonShine\MultiPanels\Http\Middleware\MultiPanelMiddleware;
 use ReflectionMethod;
 use Tests\TestCase;
 
@@ -93,11 +96,29 @@ class DelegatedPanelStateTest extends TestCase
         $request = Request::create('/spa-admin');
         app()->instance('request', $request);
 
-        $response = app(PanelAuthenticate::class)->handle($request, static fn (): Response => new Response('ok'));
+        $response = app(Pipeline::class)
+            ->send($request)
+            ->through([MultiPanelMiddleware::class, Authenticate::class])
+            ->then(static fn (): Response => new Response('ok'));
 
         $this->assertInstanceOf(Response::class, $response);
         $this->assertSame('ok', $response->getContent());
         $this->assertFalse(Auth::guard('moonshine')->check());
+    }
+
+    public function test_panel_configuration_is_applied_before_authentication(): void
+    {
+        $router = app(Router::class);
+        $route = $router->getRoutes()->getByName('moonshine.admin.index');
+        $this->assertInstanceOf(Route::class, $route);
+
+        $middleware = $router->gatherRouteMiddleware($route);
+        $panel = array_search(MultiPanelMiddleware::class, $middleware, true);
+        $authentication = array_search(Authenticate::class, $middleware, true);
+
+        $this->assertIsInt($panel);
+        $this->assertIsInt($authentication);
+        $this->assertLessThan($authentication, $panel);
     }
 
     public function test_upstream_subject_gets_its_own_account_with_unknown_password(): void
