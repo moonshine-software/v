@@ -17,7 +17,7 @@ Before a public release:
 
 `moonshine/moonshine` follows the [development branch `5.x`](https://github.com/moonshine-software/moonshine/tree/5.x), and the exact commit is pinned in `composer.lock`. MoonShine 5 has no tagged release yet, so install with `composer install` and never with a floating `composer update`.
 
-`moonshine/multi-panels` uses the published `0.1.0`. Index pages and the generation stub use `RestIndexPage`: filters belong to the page, and relation filters receive their parent resource.
+`moonshine/multi-panels` uses the published `1.0.0`, which supports MoonShine 4.4+ and 5.x. Index pages and the generation stub use `RestIndexPage`: filters belong to the page, and relation filters receive their parent resource.
 
 ## Automated checks
 

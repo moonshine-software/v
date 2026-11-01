@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "10b68b452a5fd7085dc05268c1955fe3",
+    "content-hash": "50870a28718dd41a0c572a101b6ae060",
     "packages": [
         {
             "name": "brick/math",
@@ -2354,16 +2354,16 @@
         },
         {
             "name": "moonshine/multi-panels",
-            "version": "0.1.0",
+            "version": "1.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/moonshine-software/multi-panels.git",
-                "reference": "34bb26bb436e66b5e65565c3faf92228110878f9"
+                "reference": "a72953fc0828aef9291765e8b68cbb46cdd91773"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/moonshine-software/multi-panels/zipball/34bb26bb436e66b5e65565c3faf92228110878f9",
-                "reference": "34bb26bb436e66b5e65565c3faf92228110878f9",
+                "url": "https://api.github.com/repos/moonshine-software/multi-panels/zipball/a72953fc0828aef9291765e8b68cbb46cdd91773",
+                "reference": "a72953fc0828aef9291765e8b68cbb46cdd91773",
                 "shasum": ""
             },
             "require": {
@@ -2372,7 +2372,12 @@
                 "php": "^8.2"
             },
             "conflict": {
-                "moonshine/moonshine": "<4.4"
+                "moonshine/moonshine": "<4.4 || >=6.0"
+            },
+            "require-dev": {
+                "moonshine/moonshine": "5.x-dev",
+                "orchestra/testbench": "^10.0 || ^11.0",
+                "phpunit/phpunit": "^11.5 || ^12.0"
             },
             "type": "library",
             "extra": {
@@ -2410,7 +2415,7 @@
                 "issues": "https://github.com/moonshine-software/multi-panels/issues",
                 "source": "https://github.com/moonshine-software/multi-panels"
             },
-            "time": "2026-01-08T13:54:58+00:00"
+            "time": "2026-11-01T10:34:23+00:00"
         },
         {
             "name": "nesbot/carbon",
