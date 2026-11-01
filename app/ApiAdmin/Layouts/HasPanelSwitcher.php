@@ -113,7 +113,8 @@ trait HasPanelSwitcher
         $hasServicePanelIndex = $servicePanels !== [];
 
         $items = [];
-        $currentTitle = $currentPanel !== '' ? $currentPanel : 'Service';
+        // The hub is not a service panel, so it has no entry below to take a title from.
+        $currentTitle = 'Services';
 
         foreach ($panels as $key => $panel) {
             $keyStr = (string) $key;

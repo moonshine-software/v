@@ -172,10 +172,9 @@ final class CustomFieldGenerator
         $path = config_path('api-admin.php');
         $source = File::get($path);
 
-        $entry = "    '{$typeKey}' => ['class' => \\{$fqcn}::class, 'alias' => '{$alias}'],";
+        $entry = var_export($typeKey, true)." => ['class' => \\{$fqcn}::class, 'alias' => ".var_export($alias, true).']';
 
-        $updated = $this->rewriteCustomFieldsArray($source, $typeKey, $entry);
-        AtomicFileWriter::put($path, $updated);
+        AtomicFileWriter::put($path, ConfigArrayBlock::rewrite($source, 'custom_fields', $typeKey, $entry));
 
         // Clear config cache so fieldTypeCatalog() sees the new entry
         // in the current process (the MCP server is long-running).
@@ -189,7 +188,7 @@ final class CustomFieldGenerator
     {
         $path = config_path('api-admin.php');
         $source = File::get($path);
-        $updated = $this->rewriteCustomFieldsArray($source, $typeKey, null);
+        $updated = ConfigArrayBlock::rewrite($source, 'custom_fields', $typeKey, null);
 
         if ($updated === $source) {
             return false;
@@ -202,59 +201,6 @@ final class CustomFieldGenerator
         config(['api-admin.custom_fields' => $current]);
 
         return true;
-    }
-
-    /**
-     * Rewrite the `custom_fields => [...]` block in config/api-admin.php
-     * idempotently: add the `$addEntry` line (replacing any pre-existing
-     * one with the same `$typeKey`), or remove any line with that key if
-     * `$addEntry` is null.
-     */
-    private function rewriteCustomFieldsArray(string $source, string $typeKey, ?string $addEntry): string
-    {
-        if (! preg_match("/('custom_fields'\s*=>\s*\[)([^\]]*)(\],)/s", $source, $match, PREG_OFFSET_CAPTURE)) {
-            // Block missing — nothing to do for delete; for add, prepend
-            // a fresh block before the closing `];` of the returned array.
-            if ($addEntry === null) {
-                return $source;
-            }
-            $fresh = "    'custom_fields' => [\n".$addEntry."\n    ],\n];";
-
-            return preg_replace('/\];\s*$/', $fresh, $source) ?? $source;
-        }
-
-        $prefix = $match[1][0];
-        $body = $match[2][0];
-        $suffix = $match[3][0];
-        $offset = $match[0][1];
-        $length = strlen($match[0][0]);
-
-        // Parse existing entries by splitting on line-break; preserve order.
-        $lines = array_filter(
-            array_map(rtrim(...), explode("\n", $body)),
-            static fn (string $l): bool => trim($l) !== '',
-        )
-            |> array_values(...);
-
-        $filtered = [];
-        foreach ($lines as $line) {
-            if (preg_match("/'{$typeKey}'\s*=>/", $line)) {
-                continue;
-            }
-            $filtered[] = $line;
-        }
-
-        if ($addEntry !== null) {
-            $filtered[] = $addEntry;
-        }
-
-        $newBody = $filtered === []
-            ? "\n    "
-            : "\n".implode("\n", $filtered)."\n    ";
-
-        $replacement = $prefix.$newBody.$suffix;
-
-        return substr($source, 0, $offset).$replacement.substr($source, $offset + $length);
     }
 
     private function classBaseName(string $fqcn): string

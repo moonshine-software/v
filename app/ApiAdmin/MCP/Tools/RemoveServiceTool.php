@@ -17,8 +17,7 @@ use Throwable;
  *   - deletes Resources/{Service}/**
  *   - deletes Configs/{Service}Config.php
  *   - deletes Layouts/{Service}Layout.php
- *   - drops the entry from config/api-admin.php (services)
- *   - drops the panel block from config/moonshine.php
+ *   - drops the service and panel entries from the generated registry
  *   - triggers api-admin:reload
  *
  * Allows the developer's AI agent to tear down a service without touching

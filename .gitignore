@@ -21,6 +21,8 @@
 /.claude/
 /skills-lock.json
 /auth.json
+/coverage
+/docker/angie/conf.d/tls-acme.conf
 /node_modules
 /public/build
 /public/hot

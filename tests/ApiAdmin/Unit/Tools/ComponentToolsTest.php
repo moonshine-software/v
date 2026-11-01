@@ -13,10 +13,11 @@ use Illuminate\Support\Facades\File;
 use MoonShine\Laravel\Providers\MoonShineServiceProvider;
 use MoonShine\MultiPanels\Providers\MultiPanelServiceProvider;
 use Orchestra\Testbench\TestCase;
+use Tests\ApiAdmin\Concerns\UsesIsolatedProjectRoot;
 
 final class ComponentToolsTest extends TestCase
 {
-    private string $configSnapshot = '';
+    use UsesIsolatedProjectRoot;
 
     protected function getPackageProviders($app): array
     {
@@ -29,8 +30,7 @@ final class ComponentToolsTest extends TestCase
 
     protected function defineEnvironment($app): void
     {
-        $projectRoot = dirname(__DIR__, 4);
-        $app->setBasePath($projectRoot);
+        $this->useIsolatedProjectRoot($app);
         $app['config']->set('api-admin.specs_path', base_path('.ai-factory/specs'));
     }
 
@@ -38,33 +38,31 @@ final class ComponentToolsTest extends TestCase
     {
         parent::setUp();
 
-        $this->configSnapshot = File::get(base_path('config/api-admin.php'));
         config(['api-admin.custom_components' => []]);
     }
 
     protected function tearDown(): void
     {
-        File::put(base_path('config/api-admin.php'), $this->configSnapshot);
-
-        $classDir = base_path('app/ApiAdmin/Components/Custom');
-        if (File::isDirectory($classDir)) {
-            foreach (File::files($classDir) as $f) {
-                if (str_starts_with($f->getFilename(), 'Test')) {
-                    File::delete($f->getPathname());
-                }
-            }
-        }
-
-        $viewDir = base_path('resources/views/api-admin/components/custom');
-        if (File::isDirectory($viewDir)) {
-            foreach (File::files($viewDir) as $f) {
-                if (str_starts_with($f->getFilename(), 'test-')) {
-                    File::delete($f->getPathname());
-                }
-            }
-        }
+        $this->removeIsolatedProjectRoot();
 
         parent::tearDown();
+    }
+
+    public function test_component_tools_keep_the_config_valid_and_restore_it_after_deletion(): void
+    {
+        $original = File::get(config_path('api-admin.php'));
+
+        $this->assertTrue((new CreateComponentTool)->execute(['name' => 'TestFirst'])['success']);
+        $this->assertTrue((new CreateComponentTool)->execute(['name' => 'TestSecond'])['success']);
+        $this->assertTrue((new UpdateComponentTool)->execute(['name' => 'TestFirst', 'extends' => 'Box'])['success']);
+        $this->assertSame(['TestFirst', 'TestSecond'], array_keys((array) $this->freshApiAdminConfig()['custom_components']));
+
+        foreach (['TestFirst', 'TestSecond'] as $name) {
+            $this->assertTrue((new DeleteComponentTool)->execute(['name' => $name, 'confirm' => true])['success']);
+            $this->assertIsArray($this->freshApiAdminConfig()['custom_components']);
+        }
+
+        $this->assertSame($original, File::get(config_path('api-admin.php')));
     }
 
     public function test_create_component_writes_class_and_view(): void

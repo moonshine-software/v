@@ -19,6 +19,7 @@ skills-lock.json
 .mcp.json
 .moonshine-install
 auth.json
+coverage
 docs
 tests
 examples

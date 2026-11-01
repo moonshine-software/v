@@ -24,7 +24,7 @@ use RuntimeException;
  * Registers a new microservice in the admin panel:
  * 1. Creates a ServiceConfig file in the configs directory
  * 2. Creates a panel Layout class
- * 3. Updates the api-admin.php config with the new service
+ * 3. Stores the service and panel in the generated registry (storage/api-admin/generated)
  * 4. Triggers hot-reload
  */
 final class RegisterServiceTool implements ToolContract
@@ -319,7 +319,7 @@ final class RegisterServiceTool implements ToolContract
                     ],
                     'realtime' => [
                         'type' => 'object',
-                        'description' => 'Optional upstream webhook + browser refresh settings. Configure Laravel broadcasting and Echo separately. Hosted refresh uses private channels authorized by the service panel user and tenant membership. webhook_secret is required for enabled hosted realtime, stored in TenantSecretStore there and <SERVICE>_WEBHOOK_SECRET in .env locally.',
+                        'description' => 'Optional upstream webhook + browser refresh settings. Configure Laravel broadcasting and Echo separately. Hosted refresh uses private channels authorized by the service panel user and tenant membership. webhook_secret is required for enabled hosted realtime, stored in TenantSecretStore there and <SERVICE>_WEBHOOK_SECRET in .env locally. Omit the whole object on re-registration to keep the stored realtime settings; a provided object replaces them, and omitted keys take their defaults.',
                         'properties' => [
                             'enabled' => [
                                 'type' => 'boolean',
@@ -595,7 +595,7 @@ final class RegisterServiceTool implements ToolContract
         $layoutFile = $this->createLayout($name);
         $files[] = $layoutFile;
 
-        // Step 3: Update api-admin.php config (also persists session + new oauth params).
+        // Step 3: Update the generated service registry (also persists session + new oauth params).
         $this->updateConfig(
             $name,
             $baseUrl,
@@ -625,7 +625,7 @@ final class RegisterServiceTool implements ToolContract
             realtime: $realtime,
         );
 
-        // Step 4: Register panel in moonshine.php for multi-panel routing
+        // Step 4: Register the panel in the generated registry for multi-panel routing
         $this->registerPanel($name, $panel, $title);
 
         // Step 5: Write/update .env so env() reads fresh values even when
@@ -1033,7 +1033,7 @@ final class RegisterServiceTool implements ToolContract
     }
 
     /**
-     * Update the api-admin.php config to include the new service.
+     * Update the generated service registry to include the new service.
      *
      * Sensitive secrets (oauth_password, oauth_refresh_token, session_password)
      * are NOT written here — they live in .env. The config file holds only
@@ -1344,27 +1344,30 @@ final class RegisterServiceTool implements ToolContract
      */
     private function readExistingRealtimeConfig(string $name): array
     {
-        $configPath = config_path('api-admin.php');
-        if (! File::exists($configPath)) {
-            return [];
-        }
-
-        /** @var array<string, mixed> $config */
-        $config = include $configPath;
-        $value = data_get($config, "services.{$name}.realtime");
-
-        if (! is_array($value)) {
-            return [];
-        }
-
-        $realtime = [];
-        foreach ($value as $key => $item) {
-            if (is_string($key)) {
-                $realtime[$key] = $item;
+        foreach (array_unique([$this->generatedServicesPath(), config_path('api-admin.php')]) as $configPath) {
+            if (! File::exists($configPath)) {
+                continue;
             }
+
+            /** @var array<string, mixed> $config */
+            $config = include $configPath;
+            $value = data_get($config, "services.{$name}.realtime");
+
+            if (! is_array($value)) {
+                continue;
+            }
+
+            $realtime = [];
+            foreach ($value as $key => $item) {
+                if (is_string($key)) {
+                    $realtime[$key] = $item;
+                }
+            }
+
+            return $realtime;
         }
 
-        return $realtime;
+        return [];
     }
 
     /**
@@ -1514,7 +1517,7 @@ final class RegisterServiceTool implements ToolContract
     }
 
     /**
-     * Register a panel entry in config/moonshine.php for multi-panel routing.
+     * Register a panel entry in the generated registry for multi-panel routing.
      */
     private function registerPanel(string $name, string $panel, string $title): void
     {
@@ -1541,7 +1544,7 @@ final class RegisterServiceTool implements ToolContract
             $panels,
         )]);
 
-        Log::debug('RegisterServiceTool: registered panel in moonshine.php', [
+        Log::debug('RegisterServiceTool: registered panel', [
             'panel' => $panel,
             'prefix' => $prefix,
         ]);

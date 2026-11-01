@@ -1,7 +1,7 @@
 {
     "$schema": "https://www.schemastore.org/package.json",
     "name": "moonshine-v",
-    "version": "0.1.0-dev",
+    "version": "0.1.0",
     "private": true,
     "type": "module",
     "files": [

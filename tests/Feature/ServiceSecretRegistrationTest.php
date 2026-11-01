@@ -90,6 +90,34 @@ final class ServiceSecretRegistrationTest extends TestCase
         $this->assertSame(['Authorization' => 'Bearer '], ApiAdminServiceProvider::resolveService('secret-audit')->authHeaders());
     }
 
+    #[DataProvider('registrationModes')]
+    public function test_omitting_realtime_keeps_the_stored_settings(string $mode): void
+    {
+        $this->tenant($mode);
+        $realtime = [
+            'enabled' => true,
+            'webhook_secret' => 'kept-webhook',
+            'refresh_strategy' => 'notice',
+            'webhook_signature_header' => 'X-Upstream-Signature',
+            'allowed_events' => ['updated'],
+        ];
+        $this->register(['realtime' => $realtime]);
+        $this->register();
+
+        $stored = include $this->directory.'/services.php';
+        $this->assertIsArray($stored);
+        $this->assertTrue(data_get($stored, 'services.secret-audit.realtime.enabled'));
+        $this->assertSame('notice', data_get($stored, 'services.secret-audit.realtime.refresh_strategy'));
+        $this->assertSame('X-Upstream-Signature', data_get($stored, 'services.secret-audit.realtime.webhook_signature_header'));
+        $this->assertSame(['updated'], data_get($stored, 'services.secret-audit.realtime.allowed_events'));
+        $this->assertSame('kept-webhook', data_get(ApiAdminServiceProvider::resolveService('secret-audit')->toArray(), 'realtime.webhook_secret'));
+
+        $this->register(['realtime' => ['enabled' => false]]);
+        $stored = include $this->directory.'/services.php';
+        $this->assertIsArray($stored);
+        $this->assertFalse(data_get($stored, 'services.secret-audit.realtime.enabled'));
+    }
+
     public function test_hosted_oauth_registration_reuses_the_saved_client_secret(): void
     {
         $this->tenant('hosted');

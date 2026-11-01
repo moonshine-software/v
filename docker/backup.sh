@@ -8,7 +8,7 @@ mkdir "$BACKUP_DIR"
 COMPOSE=(bash "$ROOT/docker/production.sh")
 "${COMPOSE[@]}" stop web queue scheduler api-admin-fpm
 # Failure deliberately leaves writers stopped until the operator investigates.
-"${COMPOSE[@]}" exec -T postgres pg_dump -U api_admin -d api_admin -Fc > "$BACKUP_DIR/database.dump"
+"${COMPOSE[@]}" exec -T postgres pg_dump -U moonshine_v -d moonshine_v -Fc > "$BACKUP_DIR/database.dump"
 "${COMPOSE[@]}" run --rm --no-deps -T migrate tar -C /var/www/html/storage -czf - . > "$BACKUP_DIR/state.tar.gz"
 "${COMPOSE[@]}" exec -T redis redis-cli SAVE
 "${COMPOSE[@]}" stop redis

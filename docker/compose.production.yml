@@ -30,8 +30,8 @@ x-env: &env
   DB_CONNECTION: pgsql
   DB_HOST: postgres
   DB_PORT: 5432
-  DB_DATABASE: api_admin
-  DB_USERNAME: api_admin
+  DB_DATABASE: moonshine_v
+  DB_USERNAME: moonshine_v
   DB_PASSWORD: ${DB_PASSWORD:?Set a unique database password}
   CACHE_STORE: redis
   SESSION_DRIVER: redis
@@ -138,8 +138,8 @@ services:
     # The official entrypoint initializes/chowns its private data volume, then drops root.
     cap_add: [CHOWN, FOWNER, DAC_OVERRIDE, SETUID, SETGID]
     environment:
-      POSTGRES_DB: api_admin
-      POSTGRES_USER: api_admin
+      POSTGRES_DB: moonshine_v
+      POSTGRES_USER: moonshine_v
       POSTGRES_PASSWORD: ${DB_PASSWORD:?Set a unique database password}
       PGDATA: /var/lib/postgresql/18/docker
     volumes: [postgres_data:/var/lib/postgresql]
@@ -147,7 +147,7 @@ services:
     networks: [backends]
     restart: unless-stopped
     healthcheck:
-      test: [CMD, pg_isready, -U, api_admin, -d, api_admin]
+      test: [CMD, pg_isready, -U, moonshine_v, -d, moonshine_v]
       interval: 5s
       timeout: 5s
       retries: 20

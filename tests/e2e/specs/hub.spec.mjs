@@ -24,6 +24,15 @@ test('the hub lists every service with its real status', async ({ page }) => {
     await expect(main.getByRole('link', { name: /Local App/ })).toBeVisible();
 });
 
+test('the panel switcher names the hub and the current service', async ({ page }) => {
+    await signInToHub(page);
+    const title = page.locator('.api-admin-panel-switcher__title');
+    await expect(title).toHaveText('Services');
+
+    await page.goto('/blog-admin');
+    await expect(title).toHaveText('Blog Admin');
+});
+
 test('the panel switcher moves between services', async ({ page }) => {
     await signInToHub(page);
     await page.goto('/blog-admin');

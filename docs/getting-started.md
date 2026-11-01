@@ -18,8 +18,6 @@ application; there is no separate Composer package installation documented here.
 
 Run these commands for a **new checkout**. Keep an existing installation's `.env`
 and encryption key when upgrading.
-The repository is currently private, so cloning requires configured GitHub
-authentication and repository access.
 
 ```sh
 git clone https://github.com/moonshine-software/v.git

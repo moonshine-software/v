@@ -207,6 +207,23 @@ foreach (['simple', 'numbered'] as $name) {
     ]];
 }
 
+$preview = static fn (string $prefix): array => [[
+    'name' => 'resolvePreview',
+    'return' => 'string',
+    'body' => "return '{$prefix}:'.parent::resolvePreview();",
+]];
+array_push(
+    $steps,
+    ['create_field', ['name' => 'E2eBrandName', 'extends' => 'text', 'methods_override' => $preview('created')]],
+    ['create_field', ['name' => 'E2eRemoved', 'extends' => 'text']],
+    ['update_field', ['name' => 'E2eBrandName', 'extends' => 'text', 'methods_override' => $preview('updated')]],
+    ['delete_field', ['name' => 'E2eRemoved', 'confirm' => true]],
+    ['create_resource', [
+        'service' => 'shop', 'name' => 'brand', 'endpoint' => '/brands', 'title' => 'Brands', 'actions' => ['view'],
+        'fields' => [['column' => 'id', 'type' => 'id'], ['column' => 'name', 'type' => 'e2e_brand_name']],
+    ]],
+);
+
 foreach ($steps as [$tool, $params]) {
     $result = $server->executeTool($tool, $params);
     if (($result['success'] ?? false) !== true) {

@@ -118,7 +118,7 @@ final readonly class HostedMcpController
                 ],
                 'serverInfo' => [
                     'name' => 'moonshine-v-hosted',
-                    'version' => '0.1.0',
+                    'version' => McpServer::VERSION,
                 ],
                 'instructions' => 'Hosted moonshine-v MCP. Requests are authenticated with a tenant-bound bearer token; tools run only inside that tenant context.',
             ]);

@@ -427,7 +427,7 @@ An agent reads them once per session and does not parse the tool schema on every
 
 | Tool | What it does | Destructive |
 |---|---|---|
-| `register_service` | Registers a service: Config, Layout, panel in `moonshine.php`, entry in `api-admin.php`. Accepts `response_format: laravel\|django\|flat\|custom` (mapping preset) or an explicit `response_mapping`; `realtime` defines the webhook + browser refresh contract, the recommended broadcaster backend is Laravel Reverb. Omitted secrets are preserved in local/hosted storage; explicit empty strings clear them unless required by the selected auth/realtime mode. | no |
+| `register_service` | Registers a service: Config, Layout, service and panel entries in `storage/api-admin/generated/`. Accepts `response_format: laravel\|django\|flat\|custom` (mapping preset) or an explicit `response_mapping`; `realtime` defines the webhook + browser refresh contract, the recommended broadcaster backend is Laravel Reverb. Omitted secrets are preserved in local/hosted storage; explicit empty strings clear them unless required by the selected auth/realtime mode. Omitting the whole `realtime` object keeps its stored settings. | no |
 | `initialize_local_service` | Registers a local MoonShine panel for Eloquent models (`kind: local`, `driver: eloquent`). Does not accept `base_url`, `api_key`, `response_mapping` or OAuth/session/admin_auth/realtime/health settings; those need `register_service`. | no |
 | `create_resource` | Generates a Resource + three pages for a service. Supports `has_many`/`has_one` with nested resources, `belongs_to_many`, `select` with `options`, `list_request` for POST list/search endpoints. An existing resource wins over the other form of its name: `posts` regenerates `Post` (`ServiceRegistry::resourceBaseName`). | no |
 | `create_model_resource` | Generates a native MoonShine `ModelResource` + Pages for a local Eloquent service. Accepts `model`, scalar/UI `fields`, per-page overrides, `rules`, `search`, `actions`, `icon`, `group`. Rejects REST services with `LOCAL_SERVICE_REQUIRED`, missing or non-Eloquent models with `MODEL_NOT_FOUND`. | no |
@@ -435,7 +435,7 @@ An agent reads them once per session and does not parse the tool schema on every
 | `list_services` | Array of registered services with `base_url`, `panel`, `auth_type`, `resources_count`, file paths. Read-only. | no |
 | `list_resources` | Array of generated resources (across all services or for one). Read-only. | no |
 | `get_resource` | The latest resource spec from the sidecar (`.ai-factory/specs/<service>/<resource>.json`). Call it before `update_resource`, which does a full replace. `SPEC_MISSING` if there is no sidecar. Read-only. | no |
-| `remove_service` | Full service removal: Configs, Layouts, Resources/{Service}, entry in `api-admin.php`, panel in `moonshine.php`. Requires `confirm: true`. | **YES** |
+| `remove_service` | Full service removal: Configs, Layouts, Resources/{Service}, service and panel entries in the generated registry. Requires `confirm: true`. | **YES** |
 | `remove_resource` | Removes one resource (directory + Pages). Requires `confirm: true`. | **YES** |
 | `probe_endpoint` | Tries a service endpoint with its authorization. GET by default; for POST-only list/search accepts `method: "POST"` + `body`. Returns `{status, headers, sample_json, guessed_mapping, guessed_format, hints, timings_ms}`. | no |
 | `health_check` | Pings the health endpoint of all tenant-visible services (or one through `service`). Returns `{service, tenant_id, status, code, url, latency_ms}` and `diagnostics` (`mode`, tenant id, cache/session/queue/broadcast backends, hosted warnings). | no |
@@ -492,6 +492,8 @@ Additional top-level spec keys that **REPLACE** (do not merge with) the canonica
 Custom fields and components are created through the MCP tools `create_field` / `create_component`. Source of truth:
 - **Fields:** `app/ApiAdmin/Fields/Custom/` + `api-admin.custom_fields` in `config/api-admin.php`. `ResourceGenerator::fieldTypeCatalog()` automatically merges the config over builtins.
 - **Components:** `app/ApiAdmin/Components/Custom/` + `resources/views/api-admin/components/custom/` + `api-admin.custom_components`.
+
+Both generators edit `config/api-admin.php` through `ConfigArrayBlock`, which works on PHP tokens and refuses invalid results: a broken file stops the application and the MCP server. Tests of these tools use `Tests\ApiAdmin\Concerns\UsesIsolatedProjectRoot` and must re-read the file, not only the in-memory config.
 
 An agent must first make sure no ready primitive exists (`list_fields` + `describe_field_type` / `list_components`): custom generation is for cases where built-in primitives truly do not fit.
 

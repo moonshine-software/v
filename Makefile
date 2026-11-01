@@ -240,9 +240,10 @@ ci: install lint test build ## Run full CI pipeline
 .PHONY: clean
 clean: ## Remove generated files and caches
 	rm -rf vendor/ node_modules/ coverage/
-	rm -rf bootstrap/cache/*.php storage/framework/cache/*
-	rm -rf storage/framework/sessions/* storage/framework/views/*
-	rm -rf public/build/
+	rm -rf bootstrap/cache/*.php public/build/
+	# Keep the tracked .gitignore placeholders of the storage directories.
+	find storage/framework/cache storage/framework/sessions storage/framework/views -type f ! -name .gitignore -delete
+	find storage/framework/cache storage/framework/sessions storage/framework/views -mindepth 1 -type d -empty -delete
 
 ##@ Help
 

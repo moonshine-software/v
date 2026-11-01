@@ -12,9 +12,12 @@ use MoonShine\Laravel\Providers\MoonShineServiceProvider;
 use MoonShine\MultiPanels\Providers\MultiPanelServiceProvider;
 use Orchestra\Testbench\TestCase;
 use RuntimeException;
+use Tests\ApiAdmin\Concerns\UsesIsolatedProjectRoot;
 
 final class CustomFieldGeneratorTest extends TestCase
 {
+    use UsesIsolatedProjectRoot;
+
     protected function getPackageProviders($app): array
     {
         return [
@@ -26,46 +29,19 @@ final class CustomFieldGeneratorTest extends TestCase
 
     protected function defineEnvironment($app): void
     {
-        // Orchestra Testbench spins up a stub Laravel app in
-        // vendor/orchestra/testbench-core/laravel, where base_path +
-        // config_path both resolve. Point them at the real project so
-        // the generator edits the actual config/api-admin.php and emits
-        // the custom field under app/ApiAdmin/Fields/Custom (tests clean
-        // up their own files on tearDown).
-        $projectRoot = dirname(__DIR__, 4);
-        $app->setBasePath($projectRoot);
+        $this->useIsolatedProjectRoot($app);
     }
-
-    /** @var list<string> */
-    private array $configSnapshot = [];
-
-    private string $configPath = '';
 
     protected function setUp(): void
     {
         parent::setUp();
-
-        $this->configPath = base_path('config/api-admin.php');
-        // Snapshot so tearDown can restore — generator mutates the config file.
-        $this->configSnapshot = [File::get($this->configPath)];
 
         config(['api-admin.custom_fields' => []]);
     }
 
     protected function tearDown(): void
     {
-        if ($this->configPath !== '' && isset($this->configSnapshot[0])) {
-            File::put($this->configPath, $this->configSnapshot[0]);
-        }
-
-        $customDir = base_path('app/ApiAdmin/Fields/Custom');
-        if (File::isDirectory($customDir)) {
-            foreach (File::files($customDir) as $file) {
-                if (str_starts_with($file->getFilename(), 'Test')) {
-                    File::delete($file->getPathname());
-                }
-            }
-        }
+        $this->removeIsolatedProjectRoot();
 
         parent::tearDown();
     }
@@ -115,6 +91,28 @@ final class CustomFieldGeneratorTest extends TestCase
         $this->assertFileDoesNotExist($file);
         $catalog = ResourceGenerator::fieldTypeCatalog();
         $this->assertArrayNotHasKey('test_deletable', $catalog);
+    }
+
+    public function test_config_stays_valid_across_several_fields_and_restores_after_deleting_them(): void
+    {
+        $original = File::get(config_path('api-admin.php'));
+        $generator = new CustomFieldGenerator;
+
+        $generator->generate(['name' => 'TestFirst', 'extends' => 'text']);
+        $generator->generate(['name' => 'TestSecond', 'extends' => 'number', 'alias' => "It's"]);
+        $generator->generate(['name' => 'TestFirst', 'extends' => 'textarea']);
+
+        $fields = $this->freshApiAdminConfig()['custom_fields'];
+        $this->assertSame([
+            'test_first' => ['class' => 'App\\ApiAdmin\\Fields\\Custom\\TestFirst', 'alias' => 'TestFirst'],
+            'test_second' => ['class' => 'App\\ApiAdmin\\Fields\\Custom\\TestSecond', 'alias' => "It's"],
+        ], $fields);
+
+        $this->assertTrue($generator->delete('TestFirst'));
+        $this->assertSame(['test_second'], array_keys((array) $this->freshApiAdminConfig()['custom_fields']));
+
+        $this->assertTrue($generator->delete('TestSecond'));
+        $this->assertSame($original, File::get(config_path('api-admin.php')));
     }
 
     public function test_unknown_parent_type_throws(): void

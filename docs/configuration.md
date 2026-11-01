@@ -75,6 +75,8 @@ local and hosted modes. An explicit empty string clears a secret; required
 OAuth/session credentials and enabled hosted webhook secrets still fail
 validation if empty. Local `.env` serialization preserves literal dollar signs,
 quotes, backslashes and control characters across reloads and re-registration.
+Omitting the whole `realtime` object also keeps its stored settings; a provided
+object replaces them, and omitted keys take their defaults.
 
 Service OAuth refresh tokens are stored encrypted in the database, separately
 for each tenant, service, administrator, client/token URL and initial seed.

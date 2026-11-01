@@ -493,6 +493,8 @@ and generated PHP config uses empty secret fallbacks.
 
 In both modes, omitted secrets preserve their stored values; an explicit empty
 string clears a secret unless the selected auth/realtime mode requires it.
+Omitting the whole `realtime` object keeps its stored settings; a provided object
+replaces them, and omitted keys take their defaults.
 Local `.env` storage preserves literal dollar signs, quotes and backslashes.
 
 ### `health_path` (inside `register_service`)

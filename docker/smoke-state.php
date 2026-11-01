@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\ApiAdmin\MCP\McpServer;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,18 @@ try {
             usleep(250000);
         }
     } elseif ($mode === 'write') {
+        $server = new McpServer;
+        foreach ([
+            ['create_field', ['name' => 'SmokeKept', 'extends' => 'text']],
+            ['create_field', ['name' => 'SmokeRemoved', 'extends' => 'text']],
+            ['update_field', ['name' => 'SmokeKept', 'extends' => 'textarea']],
+            ['delete_field', ['name' => 'SmokeRemoved', 'confirm' => true]],
+        ] as [$tool, $params]) {
+            $result = $server->executeTool($tool, $params);
+            if (($result['success'] ?? false) !== true) {
+                throw new RuntimeException($tool.' failed: '.json_encode($result));
+            }
+        }
         file_put_contents(storage_path('app/public/release-smoke.txt'), 'public upload');
         file_put_contents(storage_path('app/public/.env'), 'private smoke fixture');
         file_put_contents(storage_path('app/public/release-smoke.php'), '<?php echo "must never run";');
@@ -55,6 +68,10 @@ try {
             if (! str_contains(file_get_contents(storage_path('runtime/'.$path)), '# release-smoke')) {
                 throw new RuntimeException('Generated config did not persist: '.$path);
             }
+        }
+        // Every process bootstraps this file, so reaching this line also proves it still parses.
+        if (array_keys(config('api-admin.custom_fields')) !== ['smoke_kept'] || ! is_file(storage_path('runtime/fields/SmokeKept.php'))) {
+            throw new RuntimeException('Custom field tools did not leave the expected state');
         }
         if (Crypt::decryptString(DB::table('release_smoke')->where('id', 1)->value('secret')) !== 'restore-verification') {
             throw new RuntimeException('Database/APP_KEY restoration failed');

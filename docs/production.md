@@ -30,8 +30,8 @@ Build both images from the same reviewed commit and lock files. Publish/tag them
 with an immutable release identifier (prefer image digests in the environment).
 
 ```sh
-docker build --target production -f docker/Dockerfile -t your-registry/api-admin:RELEASE .
-docker build --target web -f docker/Dockerfile -t your-registry/api-admin-web:RELEASE .
+docker build --target production -f docker/Dockerfile -t your-registry/moonshine-v:RELEASE .
+docker build --target web -f docker/Dockerfile -t your-registry/moonshine-v-web:RELEASE .
 cp docker/.env.production.example docker/.env.production
 chmod 600 docker/.env.production
 ```
@@ -105,7 +105,7 @@ cannot recover encrypted credentials. Do not rotate APP_KEY without a tested
 re-encryption plan.
 
 ```sh
-bash docker/backup.sh /secure/backups/api-admin-RELEASE-TIMESTAMP
+bash docker/backup.sh /secure/backups/moonshine-v-RELEASE-TIMESTAMP
 ```
 
 The script stops all application writers, dumps PostgreSQL, archives the entire
@@ -119,7 +119,7 @@ saved environment/APP_KEY and matching image versions, initialize the stack,
 then run:
 
 ```sh
-PRODUCTION_ENV_FILE=/secure/staging.env bash docker/restore.sh /secure/backups/api-admin-RELEASE-TIMESTAMP
+PRODUCTION_ENV_FILE=/secure/staging.env bash docker/restore.sh /secure/backups/moonshine-v-RELEASE-TIMESTAMP
 ```
 
 Restore replaces the selected project's database, state and Redis data. Verify

@@ -20,7 +20,7 @@ use RuntimeException;
  * `list_components` surfaces it.
  *
  * Mirror of CustomFieldGenerator — same transactional file-plus-config
- * write, same rewriteArray helper pattern.
+ * write through ConfigArrayBlock.
  */
 final class CustomComponentGenerator
 {
@@ -168,9 +168,8 @@ final class CustomComponentGenerator
     {
         $path = config_path('api-admin.php');
         $source = File::get($path);
-        $entry = "    '{$name}' => \\{$fqcn}::class,";
-        $updated = $this->rewriteArray($source, 'custom_components', $name, $entry);
-        AtomicFileWriter::put($path, $updated);
+        $entry = var_export($name, true)." => \\{$fqcn}::class";
+        AtomicFileWriter::put($path, ConfigArrayBlock::rewrite($source, 'custom_components', $name, $entry));
 
         config(['api-admin.custom_components' => array_merge(
             (array) config('api-admin.custom_components', []),
@@ -182,7 +181,7 @@ final class CustomComponentGenerator
     {
         $path = config_path('api-admin.php');
         $source = File::get($path);
-        $updated = $this->rewriteArray($source, 'custom_components', $name, null);
+        $updated = ConfigArrayBlock::rewrite($source, 'custom_components', $name, null);
 
         if ($updated === $source) {
             return false;
@@ -194,56 +193,6 @@ final class CustomComponentGenerator
         config(['api-admin.custom_components' => $current]);
 
         return true;
-    }
-
-    /**
-     * Generic idempotent rewrite for the `$blockKey => [...]` array in
-     * config/api-admin.php. Same semantics as CustomFieldGenerator's
-     * rewriteCustomFieldsArray but with a configurable block name so
-     * both generators share the logic.
-     */
-    private function rewriteArray(string $source, string $blockKey, string $entryKey, ?string $addEntry): string
-    {
-        if (! preg_match("/('{$blockKey}'\s*=>\s*\[)([^\]]*)(\],)/s", $source, $match, PREG_OFFSET_CAPTURE)) {
-            if ($addEntry === null) {
-                return $source;
-            }
-            $fresh = "    '{$blockKey}' => [\n".$addEntry."\n    ],\n];";
-
-            return preg_replace('/\];\s*$/', $fresh, $source) ?? $source;
-        }
-
-        $prefix = $match[1][0];
-        $body = $match[2][0];
-        $suffix = $match[3][0];
-        $offset = $match[0][1];
-        $length = strlen($match[0][0]);
-
-        $lines = array_filter(
-            array_map(rtrim(...), explode("\n", $body)),
-            static fn (string $l): bool => trim($l) !== '',
-        )
-            |> array_values(...);
-
-        $filtered = [];
-        foreach ($lines as $line) {
-            if (preg_match("/'{$entryKey}'\s*=>/", $line)) {
-                continue;
-            }
-            $filtered[] = $line;
-        }
-
-        if ($addEntry !== null) {
-            $filtered[] = $addEntry;
-        }
-
-        $newBody = $filtered === []
-            ? "\n    "
-            : "\n".implode("\n", $filtered)."\n    ";
-
-        $replacement = $prefix.$newBody.$suffix;
-
-        return substr($source, 0, $offset).$replacement.substr($source, $offset + $length);
     }
 
     private function classBaseName(string $fqcn): string

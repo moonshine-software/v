@@ -11,7 +11,7 @@ use stdClass;
 /**
  * MCP Tool: list_services
  *
- * Lists every service currently registered in config/api-admin.php together with
+ * Lists every registered service together with
  * the number of generated resources, base URL, auth type and panel key. The AI
  * agent uses this to see current state before deciding what to create / remove.
  */

@@ -214,7 +214,7 @@ class McpServerCommand extends Command
                 ],
                 'serverInfo' => [
                     'name' => 'moonshine-v',
-                    'version' => '0.1.0',
+                    'version' => McpServer::VERSION,
                 ],
                 // Standard MCP `instructions` field (2024-11-05+). The
                 // client surfaces this to the agent as system context so
@@ -546,6 +546,7 @@ Known gotchas (repeat offenders — scan before debugging):
     (for auth_type="none").
     The same preserve/clear contract applies to other secrets in local and
     hosted modes; required credentials still undergo validation.
+    Omitting the whole `realtime` object keeps its stored settings too.
   • Embedded Laravel relations (GET /x/1 → {resource:{data:{...,
     client:{id,name}}}}) need detail_data_key: "resource.data" +
     fields[].column = embed key name (client, not client_id).

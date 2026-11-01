@@ -56,6 +56,9 @@ use Throwable;
  */
 final class McpServer
 {
+    /** Kept equal to the version in package.json. */
+    public const string VERSION = '0.1.0';
+
     private const array GENERATION_TOOLS = [
         'register_service', 'initialize_local_service', 'create_resource',
         'create_model_resource', 'configure_layout', 'remove_service',

@@ -8,7 +8,7 @@ test -s "$BACKUP_DIR/state.tar.gz"
 test -s "$BACKUP_DIR/redis.tar.gz"
 COMPOSE=(bash "$ROOT/docker/production.sh")
 "${COMPOSE[@]}" stop web queue scheduler api-admin-fpm redis
-"${COMPOSE[@]}" exec -T postgres pg_restore -U api_admin -d api_admin --clean --if-exists --exit-on-error < "$BACKUP_DIR/database.dump"
+"${COMPOSE[@]}" exec -T postgres pg_restore -U moonshine_v -d moonshine_v --clean --if-exists --exit-on-error < "$BACKUP_DIR/database.dump"
 "${COMPOSE[@]}" run --rm --no-deps -T --user root init sh docker/restore-state.sh < "$BACKUP_DIR/state.tar.gz"
 "${COMPOSE[@]}" run --rm --no-deps -T --entrypoint sh redis -ec 'find /data -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 tar -C /data -xzf -
