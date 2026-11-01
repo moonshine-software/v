@@ -533,6 +533,12 @@ Envelope + pagination config:
 
 - `data_key`, `total_key`, `per_page_key`, `current_page_key`,
   `last_page_key`, `primary_key` — standard pagination keys.
+- `per_page_param_name` (default `per_page`) is the upstream page-size request
+  parameter: Django `page_size`, Spring Boot `size`. `zero_based_pages: true`
+  translates Spring's zero-based request/response pages; UI/MCP pages stay 1-based.
+- `next_page_url_key` / `prev_page_url_key` map body navigation URLs. The `django`
+  preset uses `next` / `previous`; without last-page metadata it renders a simple
+  previous/next pager and does not guess a page count from the requested size.
 - `detail_data_key` (dot-path, default empty). Set when single-item
   responses have a deeper / different envelope than the list. Classic
   Laravel JsonResource case: list returns `{data: [...]}` but
@@ -560,6 +566,7 @@ Envelope + pagination config:
   that expose only a list + writes (no per-id read) — e.g. tag / status
   catalogues edited in-line from the list view. Pair with
   `detail_list_key_param` when the filter param isn't the primary key.
+  A list lookup requires an exact primary-key match; it never substitutes the first row.
 - `pagination_type: "length_aware"` (default, Laravel/Django), `"cursor"`
   (`{data:[...], cursor:{next:"..."}}` shape — resource emits
   `?cursor=<token>&per_page=M` and renders a next-only paginator;

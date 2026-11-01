@@ -16,6 +16,7 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
 use MoonShine\Contracts\Core\DependencyInjection\CoreContract;
+use MoonShine\Laravel\Models\MoonshineUser;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -185,6 +186,75 @@ final class UpstreamPathSecurityTest extends TestCase
             return str_starts_with($request->url(), 'https://path.example.test/tags-batch?')
                 && $query === ['ids' => '7&scope=all,9', 'scope' => 'project'];
         });
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function opaqueIds(): iterable
+    {
+        foreach (['user:7', 'a b', 'café', 'user+test@example.test?scope=all#id'] as $id) {
+            yield $id => [$id];
+        }
+    }
+
+    #[DataProvider('opaqueIds')]
+    public function test_browser_relation_updates_accept_safe_opaque_parent_and_child_ids(string $id): void
+    {
+        $resource = $this->browserRelationResource();
+        moonshine()->resources([$resource]);
+        $this->actingAs(new MoonshineUser(['id' => 1]), 'moonshine');
+
+        $this->putJson('/rest-has-many/update', [
+            '_resource' => $resource->getUriKey(), '_relation' => 'children',
+            '_parent_id' => $id, '_key' => $id, 'title' => 'Unchanged payload',
+        ])->assertOk();
+
+        Http::assertSent(static fn (Request $request): bool => $request->method() === 'PUT'
+            && $request->url() === 'https://path.example.test/parents/'.rawurlencode($id).'/children/'.rawurlencode($id)
+            && $request['title'] === 'Unchanged payload');
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function unsafeRelationIds(): iterable
+    {
+        foreach (['../users', '..', '%2e%2e', '7\\users', "7\nx"] as $id) {
+            yield json_encode($id, JSON_THROW_ON_ERROR) => [$id];
+        }
+    }
+
+    #[DataProvider('unsafeRelationIds')]
+    public function test_browser_relations_still_reject_unsafe_ids_before_http(string $id): void
+    {
+        $resource = $this->browserRelationResource();
+        moonshine()->resources([$resource]);
+        $this->actingAs(new MoonshineUser(['id' => 1]), 'moonshine');
+
+        $this->putJson('/rest-has-many/update', [
+            '_resource' => $resource->getUriKey(), '_relation' => 'children',
+            '_parent_id' => 7, '_key' => $id, 'title' => 'Unchanged payload',
+        ])->assertUnprocessable();
+
+        Http::assertNothingSent();
+    }
+
+    private function browserRelationResource(): AbstractRestResource
+    {
+        return new class(app(CoreContract::class)) extends AbstractRestResource
+        {
+            protected function resolveServiceConfig(): ServiceConfig
+            {
+                return new ServiceConfig(name: 'blog', baseUrl: 'https://path.example.test', apiKey: 'synthetic', responseMapping: new ResponseMapping);
+            }
+
+            protected function endpoint(): string
+            {
+                return '/parents';
+            }
+
+            protected function formFields(): iterable
+            {
+                return [RestHasMany::make('Children', 'children')->endpoint('/parents/{parent_id}/children')->fullCrud()];
+            }
+        };
     }
 
     private function service(): ServiceConfig

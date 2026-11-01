@@ -188,6 +188,34 @@ final class ServiceSecretRegistrationTest extends TestCase
         $this->assertSame('', ApiAdminServiceProvider::resolveService('secret-audit')->oauthClientSecret);
     }
 
+    public function test_pagination_mapping_survives_generation_and_service_resolution(): void
+    {
+        $this->tenant('local');
+        foreach ([
+            ['response_format' => 'django'],
+            ['response_format' => 'custom', 'response_mapping' => ['per_page_param_name' => 'size', 'zero_based_pages' => true]],
+        ] as $params) {
+            $this->register($params);
+            $generated = include $this->directory.'/Configs/SecretAuditConfig.php';
+            $this->assertIsArray($generated);
+            $fromFile = $generated['response_mapping'];
+            $this->assertIsArray($fromFile);
+            $resolved = ApiAdminServiceProvider::resolveService('secret-audit')->responseMapping;
+            $this->assertSame($resolved->perPageParamName, $fromFile['per_page_param_name']);
+            $this->assertSame($resolved->zeroBasedPages, $fromFile['zero_based_pages']);
+            $this->assertSame($resolved->nextPageUrlKey, $fromFile['next_page_url_key']);
+            $this->assertSame($resolved->prevPageUrlKey, $fromFile['prev_page_url_key']);
+            if ($params['response_format'] === 'django') {
+                $this->assertSame('page_size', $resolved->perPageParamName);
+                $this->assertSame('next', $resolved->nextPageUrlKey);
+                $this->assertSame('previous', $resolved->prevPageUrlKey);
+            } else {
+                $this->assertSame('size', $resolved->perPageParamName);
+                $this->assertTrue($resolved->zeroBasedPages);
+            }
+        }
+    }
+
     private function tenant(string $mode): void
     {
         $context = $mode === 'local' ? TenantContext::local() : new TenantContext('tenant-a', 'acme', 'Acme', 'hosted', false);

@@ -1,4 +1,5 @@
 import { blogApi, createPost, expect, POSTS, readPost, row, signInToHub, submitMainForm, test, visibleTable } from '../support.mjs';
+import { API_PORTS } from '../environment.mjs';
 
 test.beforeEach(async ({ page }) => {
     await signInToHub(page);
@@ -118,5 +119,24 @@ test('a relation-only resource has no standalone page', async ({ page }) => {
 test('other services keep their own response format', async ({ page }) => {
     await page.goto('/shop-admin/resource/shop-product-resource/product-index-page');
 
+    await expect(visibleTable(page)).toContainText('SKU-1-001');
+});
+
+test('Django next and previous pages stay inside the panel without page metadata', async ({ page, request }) => {
+    for (let index = 0; index < 23; index++) {
+        const response = await request.post(`http://127.0.0.1:${API_PORTS.shop}/api/products`, {
+            data: { name: `Pagination product ${index}`, sku: `PAGE-${index}`, price: 10, brand_id: 1, in_stock: true },
+        });
+        expect(response.ok()).toBe(true);
+    }
+    const indexUrl = '/shop-admin/resource/shop-product-resource/product-index-page';
+    await page.goto(`${indexUrl}?sort=id`);
+    await expect(visibleTable(page)).toContainText('SKU-1-001');
+    await page.locator('main .pagination-list.simple a').filter({ hasText: 'Next' }).click();
+    await expect(page).toHaveURL(/product-index-page.*[?&]page=2/);
+    await expect(visibleTable(page)).toContainText('PAGE-22');
+    await expect(visibleTable(page)).not.toContainText('SKU-1-001');
+    await page.locator('main .pagination-list.simple a').filter({ hasText: 'Previous' }).click();
+    await expect(page).toHaveURL(/product-index-page.*[?&]page=1/);
     await expect(visibleTable(page)).toContainText('SKU-1-001');
 });

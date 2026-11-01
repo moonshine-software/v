@@ -68,6 +68,8 @@ final readonly class ResponseMapping
      *                              which misses double-nested shapes — the wrapper ends up
      *                              holding `{"data": {...}}` as the item, primary_key can't be
      *                              found, and the form renders empty.
+     * @param string $perPageParamName Upstream request parameter for page size (e.g. page_size or size).
+     * @param bool $zeroBasedPages Translate upstream zero-based page numbers to one-based UI/MCP pages.
      */
     public function __construct(
         public string $dataKey = 'data',
@@ -96,6 +98,8 @@ final readonly class ResponseMapping
         public string $sortParamName = 'sort',
         public string $searchParamName = 'search',
         public string $detailDataKey = '',
+        public string $perPageParamName = 'per_page',
+        public bool $zeroBasedPages = false,
     ) {}
 
     /**
@@ -145,6 +149,8 @@ final readonly class ResponseMapping
             sortParamName: $str('sort_param_name', '') !== '' ? $str('sort_param_name', 'sort') : 'sort',
             searchParamName: $str('search_param_name', '') !== '' ? $str('search_param_name', 'search') : 'search',
             detailDataKey: $str('detail_data_key', ''),
+            perPageParamName: $str('per_page_param_name', '') !== '' ? $str('per_page_param_name', 'per_page') : 'per_page',
+            zeroBasedPages: is_bool($mapping['zero_based_pages'] ?? null) ? $mapping['zero_based_pages'] : false,
         );
     }
 
@@ -176,6 +182,8 @@ final readonly class ResponseMapping
      *     sort_param_name: string,
      *     search_param_name: string,
      *     detail_data_key: string,
+     *     per_page_param_name: string,
+     *     zero_based_pages: bool,
      * }
      */
     public function toArray(): array
@@ -207,6 +215,8 @@ final readonly class ResponseMapping
             'sort_param_name' => $this->sortParamName,
             'search_param_name' => $this->searchParamName,
             'detail_data_key' => $this->detailDataKey,
+            'per_page_param_name' => $this->perPageParamName,
+            'zero_based_pages' => $this->zeroBasedPages,
         ];
     }
 }

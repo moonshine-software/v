@@ -10,7 +10,7 @@ The source passed the checks below. The repository is still private and no relea
 
 Before a public release:
 
-- Update the MoonShine pin to the latest reviewed `5.x` commit and repeat these checks.
+- Recheck the pinned MoonShine commit if upstream changes before publication.
 - Verify the anonymous `npx` installation and private vulnerability reporting once the repository is public.
 
 ## Core and compatibility
@@ -24,8 +24,8 @@ Before a public release:
 | Check | Result |
 |---|---|
 | `XDEBUG_MODE=off composer ai:validate` | Exit 0: Pint, Rector, production audit, PHPStan level max, PHPUnit |
-| PHPUnit | **849 passed, 4221 assertions**, run on a copy holding only publishable files |
-| Chrome E2E (`npm run test:e2e`) | **41 passed** |
+| PHPUnit | **882 passed, 4467 assertions**, including real API compatibility and HTTP authorization regressions |
+| Chrome E2E (`npm run test:e2e`) | **43 passed**, including real Django previous/next navigation without invented page metadata |
 | Installer unit tests (`npm run test:installer`) | **16 passed** |
 | Fresh Docker installation (`npm run test:installer:docker`) | Passed: secret exclusion, administrator login, MCP discovery, resume and restart persistence |
 | Production smoke (`docker/smoke.sh`) | Passed: PostgreSQL, Redis, queue, generated state, container recreation, backup/restore, backend outage |
@@ -38,6 +38,9 @@ Hosted MCP was also exercised with the official MCP SDK: handshake, ping, `tools
 
 | Finding | Resolution and evidence |
 |---|---|
+| List lookup silently selected a different record | List-strategy reads require an exact primary-key match. Feature tests cover a single mismatched row and an ignored filter, assert 404/null, and prevent subsequent writes. |
+| Django/Spring pagination mismatch | Django uses mapped `next`/`previous` links without guessing page counts; Spring supports `size` and zero-based upstream pages. Feature tests cover first/middle/last/empty pages, serialization, discovery and generated config; Chrome exercises actual Django navigation. |
+| Browser relation endpoints rejected safe opaque IDs | The shared `PathSegment` validator is used at the browser authorization boundary. HTTP feature tests accept encoded opaque parent/child IDs and reject unsafe paths before outbound requests. |
 | Unauthorized async HTTP proxy and upstream credential exposure | `RestEndpointAuthorization` checks guard, tenant, delegated state and resource action. Endpoint and query come from the server-side field; dynamic context is encrypted and bound to resource, field and parent. Regression tests assert no outbound request after a denial. |
 | Permission bypass in HasMany/HasOne | The same checks plus field and parent object permissions. Hosted URLs contain the tenant. Fallback after 401/403 is forbidden; fallback after 404 requires a confirmed child-parent link. |
 | SSRF and credential redirection | `OutboundHttp` fixes the origin and forbids redirects and unsafe TLS/proxy overrides. Hosted mode checks all DNS addresses, rejects private/link-local/NAT64 and pins the verified IP for cURL. |

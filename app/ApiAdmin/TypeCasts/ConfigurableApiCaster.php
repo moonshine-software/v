@@ -6,6 +6,7 @@ namespace App\ApiAdmin\TypeCasts;
 
 use App\ApiAdmin\ServiceConfig\ResponseMapping;
 use ArrayIterator;
+use GuzzleHttp\Psr7\Uri;
 use Illuminate\Support\Facades\Log;
 use MoonShine\Contracts\Core\Paginator\PaginatorContract;
 use MoonShine\Contracts\Core\TypeCasts\DataCasterContract;
@@ -26,6 +27,7 @@ final readonly class ConfigurableApiCaster implements DataCasterContract
     public function __construct(
         private ResponseMapping $mapping,
         private int $perPage = 25,
+        private int $currentPage = 1,
     ) {
         Log::debug('ConfigurableApiCaster: initialized', [
             'data_key' => $this->mapping->dataKey,
@@ -96,16 +98,36 @@ final readonly class ConfigurableApiCaster implements DataCasterContract
         $items = is_iterable($rawItems) ? $rawItems : [];
         $total = $this->toInt(data_get($data, $this->mapping->totalKey, 0), 0);
         $perPage = $this->toInt(data_get($data, $this->mapping->perPageKey, $this->perPage), $this->perPage);
-        $currentPage = $this->toInt(data_get($data, $this->mapping->currentPageKey, 1), 1);
-        $lastPage = $this->toInt(data_get($data, $this->mapping->lastPageKey, 1), 1);
+        $rawCurrentPage = data_get($data, $this->mapping->currentPageKey);
+        $currentPage = $rawCurrentPage === null
+            ? $this->currentPage
+            : max(1, $this->toInt($rawCurrentPage, 0) + (int) $this->mapping->zeroBasedPages);
+        $rawLastPage = data_get($data, $this->mapping->lastPageKey);
         $fromRaw = data_get($data, $this->mapping->fromKey);
         $toRaw = data_get($data, $this->mapping->toKey);
-        $path = $this->toString(data_get($data, $this->mapping->pathKey, ''));
+        $path = $this->toString(data_get($data, $this->mapping->pathKey, '')) ?: \Illuminate\Pagination\Paginator::resolveCurrentPath();
         $links = data_get($data, $this->mapping->linksKey, []);
         $firstPageUrl = data_get($data, $this->mapping->firstPageUrlKey);
         $lastPageUrl = data_get($data, $this->mapping->lastPageUrlKey);
         $prevPageUrl = data_get($data, $this->mapping->prevPageUrlKey);
         $nextPageUrl = data_get($data, $this->mapping->nextPageUrlKey);
+        $simple = $rawLastPage === null && (
+            data_get($data, $this->mapping->nextPageUrlKey, false) !== false
+            || data_get($data, $this->mapping->prevPageUrlKey, false) !== false
+        );
+        $lastPage = $simple ? null : max(1, $this->toInt($rawLastPage, 1));
+
+        if ($simple) {
+            // Upstream page size may ignore our request; follow its navigation without guessing a last page.
+            $path = \Illuminate\Pagination\Paginator::resolveCurrentPath();
+            $prevPageUrl = $this->localPageUrl($prevPageUrl, $path);
+            $nextPageUrl = $this->localPageUrl($nextPageUrl, $path);
+            Log::debug('[FIX:body-pagination] Using upstream page navigation', ['current_page' => $currentPage]);
+        } else {
+            $pageUrl = fn (int $page): string => $this->pageUrl($page, $path);
+            $prevPageUrl ??= $currentPage > 1 ? $pageUrl($currentPage - 1) : null;
+            $nextPageUrl ??= $currentPage < $lastPage ? $pageUrl($currentPage + 1) : null;
+        }
 
         Log::debug('ConfigurableApiCaster::paginatorCast', [
             'items_count' => is_countable($items) ? count($items) : 'uncountable',
@@ -116,7 +138,7 @@ final readonly class ConfigurableApiCaster implements DataCasterContract
         ]);
 
         // Build links array in the format Paginator expects: [{url, label, active}]
-        $paginatorLinks = $this->buildPaginatorLinks($links, $currentPage, $lastPage, $path);
+        $paginatorLinks = $lastPage === null ? [] : $this->buildPaginatorLinks($links, $currentPage, $lastPage, $path);
 
         // Paginator::__construct has vendor-wide generic PHPDoc quirks
         // (links declared iterable<string, mixed> on line 25, actually
@@ -144,14 +166,47 @@ final readonly class ConfigurableApiCaster implements DataCasterContract
             from: $fromRaw !== null ? $this->toInt($fromRaw, 0) : null,
             to: $toRaw !== null ? $this->toInt($toRaw, 0) : null,
             perPage: $perPage,
-            simple: false,
+            simple: $simple,
             total: $total,
             lastPage: $lastPage,
             firstPageUrl: is_string($firstPageUrl) ? $firstPageUrl : null,
             prevPageUrl: is_string($prevPageUrl) ? $prevPageUrl : null,
             lastPageUrl: is_string($lastPageUrl) ? $lastPageUrl : null,
             nextPageUrl: is_string($nextPageUrl) ? $nextPageUrl : null,
+            translates: [
+                'previous' => 'moonshine::pagination.previous',
+                'next' => 'moonshine::pagination.next',
+                'showing' => 'moonshine::pagination.showing',
+                'to' => 'moonshine::pagination.to',
+                'of' => 'moonshine::pagination.of',
+                'results' => 'moonshine::pagination.results',
+            ],
         );
+    }
+
+    private function localPageUrl(mixed $url, string $path): ?string
+    {
+        if (! is_string($url) || $url === '') {
+            return null;
+        }
+        $query = parse_url($url, PHP_URL_QUERY);
+        if (! is_string($query)) {
+            return null;
+        }
+        parse_str($query, $params);
+        $page = $params['page'] ?? null;
+
+        return is_string($page) && ctype_digit($page) && (int) $page > 0
+            ? $this->pageUrl((int) $page, $path)
+            : null;
+    }
+
+    private function pageUrl(int $page, string $path): string
+    {
+        $uri = new Uri($path);
+        parse_str($uri->getQuery(), $query);
+
+        return (string) $uri->withQuery(http_build_query([...$query, ...request()->query(), 'page' => $page]));
     }
 
     private function toInt(mixed $value, int $default): int
@@ -246,9 +301,8 @@ final readonly class ConfigurableApiCaster implements DataCasterContract
         $result = [];
 
         for ($page = 1; $page <= $lastPage; $page++) {
-            $separator = str_contains($path, '?') ? '&' : '?';
             $result[] = [
-                'url' => $path.$separator.'page='.$page,
+                'url' => $this->pageUrl($page, $path),
                 'label' => (string) $page,
                 'active' => $page === $currentPage,
             ];

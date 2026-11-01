@@ -138,8 +138,6 @@ abstract class AbstractRestResource extends CrudResource
 
     private ?ServiceConfig $resolvedServiceConfig = null;
 
-    private ?ConfigurableApiCaster $resolvedCaster = null;
-
     /**
      * Runtime-supplied endpoint that wins over endpoint() for relation
      * resources whose endpoint carries `{parent_id}` placeholders. Set by
@@ -418,14 +416,11 @@ abstract class AbstractRestResource extends CrudResource
     #[Override]
     public function getCaster(): DataCasterContract
     {
-        if (! $this->resolvedCaster instanceof ConfigurableApiCaster) {
-            $this->resolvedCaster = new ConfigurableApiCaster(
-                mapping: $this->getServiceConfig()->responseMapping,
-                perPage: $this->getItemsPerPage(),
-            );
-        }
-
-        return $this->resolvedCaster;
+        return new ConfigurableApiCaster(
+            mapping: $this->getServiceConfig()->responseMapping,
+            perPage: $this->getItemsPerPage(),
+            currentPage: max(1, $this->getPaginatorPage() ?: 1),
+        );
     }
 
     /**
@@ -968,10 +963,11 @@ abstract class AbstractRestResource extends CrudResource
             }
         }
 
-        // Some APIs return already-filtered lists of size 1 — trust it.
-        $match ??= (is_array($items[0] ?? null) ? $items[0] : null);
-
         if ($match === null) {
+            Log::warning('[FIX:list-identity] Requested record absent from list response', [
+                'resource' => static::class,
+                'item_id' => $itemId,
+            ]);
             if ($orFail) {
                 throw new NotFoundHttpException("Item {$itemId} not in list response");
             }
@@ -1652,8 +1648,8 @@ abstract class AbstractRestResource extends CrudResource
         //   cursor                 → ?cursor=...&per_page=M (no cursor on first page)
         //   none                   → no pagination params at all
         if (in_array($mapping->paginationType, ['length_aware', 'link_header'], true) && $this->isPaginationUsed()) {
-            $params['page'] = $this->getPaginatorPage() ?: 1;
-            $params['per_page'] = $this->getItemsPerPage();
+            $params['page'] = max(1, $this->getPaginatorPage() ?: 1) - (int) $mapping->zeroBasedPages;
+            $params[$mapping->perPageParamName] = $this->getItemsPerPage();
         } elseif ($mapping->paginationType === 'cursor') {
             $cursorRaw = $this->getCore()->getRequest()->get($mapping->cursorQueryParam, '');
             $cursor = is_string($cursorRaw) ? $cursorRaw : '';
@@ -1662,7 +1658,7 @@ abstract class AbstractRestResource extends CrudResource
                 $params[$mapping->cursorQueryParam] = $cursor;
             }
 
-            $params['per_page'] = $this->getItemsPerPage();
+            $params[$mapping->perPageParamName] = $this->getItemsPerPage();
         }
 
         // Sorting — skip entirely when the upstream API doesn't support it.

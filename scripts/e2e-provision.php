@@ -54,7 +54,7 @@ $steps = [
         'panel' => 'shop-admin',
         'title' => 'Shop Admin',
         'health_path' => '/health',
-        'response_mapping' => ['data_key' => 'results', 'total_key' => 'count', 'per_page_key' => 'page_size'],
+        'response_format' => 'django',
     ]],
     ['register_service', [
         'name' => 'oauth',

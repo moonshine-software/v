@@ -37,5 +37,9 @@ return [
         'current_page_key' => '{{ currentPageKey }}',
         'last_page_key' => '{{ lastPageKey }}',
         'primary_key' => '{{ primaryKey }}',
+        'next_page_url_key' => '{{ nextPageUrlKey }}',
+        'prev_page_url_key' => '{{ prevPageUrlKey }}',
+        'per_page_param_name' => '{{ perPageParamName }}',
+        'zero_based_pages' => {{ zeroBasedPages }},
     ],
 ];

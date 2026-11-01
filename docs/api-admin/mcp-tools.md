@@ -58,6 +58,10 @@ Register a new microservice in the admin panel.
 | `total_key` | `total` | Total items count key |
 | `per_page_key` | `per_page` | Items per page key |
 | `current_page_key` | `current_page` | Current page number key |
+| `per_page_param_name` | `per_page` | Upstream page-size request parameter (`page_size` for Django, `size` for Spring) |
+| `zero_based_pages` | `false` | Translate upstream zero-based page numbers; UI/MCP remain one-based |
+| `next_page_url_key` | `next_page_url` | Next URL in the response (`next` for Django) |
+| `prev_page_url_key` | `prev_page_url` | Previous URL in the response (`previous` for Django) |
 | `last_page_key` | `last_page` | Last page number key |
 | `primary_key` | `id` | Primary key field name |
 

@@ -765,6 +765,12 @@ Terminology (use these exact keys in tool arguments):
   • response_mapping (in register_service) — envelope config. Keys:
     data_key, total_key, per_page_key, current_page_key, last_page_key,
     primary_key (envelope / pagination), plus:
+      per_page_param_name: default "per_page"; Django "page_size", Spring "size".
+      zero_based_pages: true translates upstream zero-based page numbers;
+        UI/MCP page numbers remain one-based (default false).
+      next_page_url_key / prev_page_url_key: body navigation URLs. The django
+        preset maps next/previous and uses simple navigation when last-page
+        metadata is absent, without guessing a page count from requested size.
       filter_format: "nested" (default, ?filter[x]=y) | "flat" (?x=y)
       filter_param_name: default "filter". Use "filters" for Laravel
         projects using Spatie Query Builder default config
@@ -802,7 +808,7 @@ Terminology (use these exact keys in tool arguments):
       detail_strategy: "endpoint" (default) | "list". Set "list" for
         APIs that expose only a list endpoint (no GET /resource/{id}) —
         findItem() then hits the list endpoint with <key>={id} and returns
-        the matching row. detail_list_key_param overrides the filter key
+        the matching row, never an unmatched first row. detail_list_key_param overrides the filter key
         (defaults to primary_key).
       list_request: {method:"POST", body:{...}} on create_resource /
         update_resource makes Index/fetch_resource_items/count/aggregate

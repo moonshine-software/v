@@ -188,12 +188,12 @@ if ($method === 'GET' && $path === '/api/products') {
     shop_json([
         'results' => $rows,
         'count' => $count,
-        'page_size' => $pageSize,
-        'current_page' => $page,
-        'last_page' => (int) ceil($count / $pageSize),
-        'from' => $count === 0 ? null : ($offset + 1),
-        'to' => min($offset + $pageSize, $count),
-        'path' => '/api/products',
+        'next' => $offset + $pageSize < $count
+            ? '/api/products?'.http_build_query([...$_GET, 'page' => $page + 1])
+            : null,
+        'previous' => $page > 1
+            ? '/api/products?'.http_build_query([...$_GET, 'page' => $page - 1])
+            : null,
     ]);
 }
 

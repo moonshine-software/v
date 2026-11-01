@@ -54,8 +54,7 @@ final class RestEndpointAuthorization
 
     private function validateId(string|int $id): void
     {
-        abort_unless(preg_match('/^[a-zA-Z0-9_~.-]+$/D', (string) $id) === 1
-            && ! in_array((string) $id, ['.', '..'], true), 422, 'Invalid record ID');
+        PathSegment::encode($id);
     }
 
     public function authenticate(Request $request, ServiceConfig $service): void

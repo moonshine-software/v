@@ -169,7 +169,8 @@ Different APIs return paginated data in different formats. The response mapping 
 {
   "results": [...],
   "count": 100,
-  "page_size": 20
+  "next": "https://api.example.com/products?page=2",
+  "previous": null
 }
 ```
 
@@ -177,9 +178,19 @@ Different APIs return paginated data in different formats. The response mapping 
 'response_mapping' => [
     'data_key' => 'results',
     'total_key' => 'count',
-    'per_page_key' => 'page_size',
+    'next_page_url_key' => 'next',
+    'prev_page_url_key' => 'previous',
+    'per_page_param_name' => 'page_size',
 ]
 ```
+
+This is the `django` registration preset. Without last-page metadata it uses
+previous/next navigation; the server's actual page size need not equal the
+requested size. Navigation URLs stay on the admin panel.
+
+For Spring Boot, map `content`, `totalElements`, `size`, `number`, `totalPages`
+to the corresponding response keys and set `per_page_param_name: size` plus
+`zero_based_pages: true`. Browser and MCP page numbers remain one-based.
 
 ### Custom Format
 

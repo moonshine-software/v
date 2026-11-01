@@ -287,6 +287,13 @@ The generator emits `$indexMethod = 'POST'` and `$indexBody`; `AbstractRestResou
 
 ### Filter / sort / search param names
 
+Pagination request mapping also accepts `per_page_param_name` (default `per_page`)
+and `zero_based_pages` (default `false`). Spring Boot uses `size` and `true`;
+UI/MCP pages remain one-based. The Django preset maps body `next`/`previous`
+navigation and uses a simple pager when last-page metadata is absent. Probe and
+Instructor discovery must emit the same mapping. List-strategy item reads require
+an exact primary-key match and must never fall back to the first row.
+
 `response_mapping` on `register_service` input accepts three keys: `filter_param_name` (default `filter`), `sort_param_name` (default `sort`), `search_param_name` (default `search`). The combination `filter_format: nested + filter_param_name: filters` is the Laravel + Spatie Query Builder default (`?filters[status]=todo`). Without these keys the filter, sort and search controls could be silently ignored by the upstream and look like "filters are broken".
 
 `probe_endpoint` with `detect_filter_for` checks three forms (`filter[]`, `filters[]`, `flat`) and returns `guessed_filter_format` ∈ {`nested`, `plural_nested`, `flat`}. If `plural_nested` wins, the agent must set `filter_format: nested + filter_param_name: filters`.
