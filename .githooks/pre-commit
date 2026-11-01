@@ -1,0 +1,13 @@
+#!/bin/sh
+# Pre-commit: fast subset of ai:validate (pint + stan).
+# Full gate (rector + audit + phpunit) stays on make ai-validate / pre-push.
+
+set -e
+
+if [ -x /usr/local/bin/php ] && [ "$(/usr/local/bin/php -r 'echo PHP_VERSION_ID;')" -ge 80500 ]; then
+    PATH=/usr/local/bin:$PATH
+    export PATH
+fi
+
+./vendor/bin/pint --test
+composer stan --ansi

@@ -1,0 +1,86 @@
+# Enable this file only for a real public domain:
+# 1. Replace example.com/admin@example.com.
+# 2. Start with the Let's Encrypt staging directory below.
+# 3. Copy this file to tls-acme.conf.
+# 4. Publish APP_PORT=80 and HTTPS_PORT=443 in docker/.env.
+# 5. After successful staging validation, switch to the production directory:
+#    https://acme-v02.api.letsencrypt.org/directory
+
+resolver 1.1.1.1 8.8.8.8 valid=300s;
+
+acme_client_path /var/lib/angie/acme;
+
+acme_client letsencrypt https://acme-staging-v02.api.letsencrypt.org/directory
+    email=admin@example.com
+    challenge=http
+    renew_before_expiry=30d
+    retry_after_error=2h;
+
+server {
+    listen 80;
+    server_name example.com www.example.com;
+
+    acme letsencrypt;
+
+    location = /up {
+        access_log off;
+        return 204;
+    }
+
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name example.com www.example.com;
+    root /var/www/html/public;
+    index index.php;
+
+    acme letsencrypt;
+
+    ssl_certificate     $acme_cert_letsencrypt;
+    ssl_certificate_key $acme_cert_key_letsencrypt;
+
+    charset utf-8;
+    client_max_body_size 10M;
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    location = /up {
+        access_log off;
+        return 204;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico {
+        access_log off;
+        log_not_found off;
+    }
+
+    location = /robots.txt {
+        access_log off;
+        log_not_found off;
+    }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass api-admin-fpm:9000;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        fastcgi_param HTTPS on;
+        fastcgi_param HTTP_X_FORWARDED_PROTO https;
+        include /etc/angie/fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
+    }
+
+    location ~ /\.(?!well-known) {
+        deny all;
+    }
+}

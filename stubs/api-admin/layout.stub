@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use MoonShine\Laravel\Layouts\AppLayout;
+use App\ApiAdmin\Layouts\HasPanelSwitcher;
+
+class {{ className }} extends AppLayout
+{
+    use HasPanelSwitcher;
+
+    protected function menu(): array
+    {
+        return $this->panelMenu();
+    }
+
+    protected function sidebarSlot(): array
+    {
+        return $this->apiAdminSidebarSlot();
+    }
+
+    protected function getLogo(bool $small = false): string
+    {
+        return $small ? '{{ logoSmall }}' : '{{ logo }}';
+    }
+}

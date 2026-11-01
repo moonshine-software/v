@@ -1,0 +1,179 @@
+# Standalone production stack; do not merge with the development Compose file.
+name: ${COMPOSE_PROJECT_NAME:-moonshine-production}
+
+x-logging: &logging
+  driver: json-file
+  options: {max-size: 20m, max-file: "5"}
+
+x-security: &security
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 256
+  mem_limit: 512m
+  cpus: 1.0
+  logging: *logging
+
+x-env: &env
+  APP_ENV: production
+  APP_DEBUG: "false"
+  APP_KEY: ${APP_KEY:?Set a unique production APP_KEY}
+  APP_URL: ${APP_URL:?Set the public https APP_URL}
+  LOG_CHANNEL: stderr
+  LOG_LEVEL: warning
+  API_ADMIN_LOG_LEVEL: warning
+  API_ADMIN_HOSTED_MODE: ${API_ADMIN_HOSTED_MODE:-local}
+  API_ADMIN_HOSTED_MCP_ENABLED: ${API_ADMIN_HOSTED_MCP_ENABLED:-false}
+  API_ADMIN_ALLOW_PRIVATE_UPSTREAM: ${API_ADMIN_ALLOW_PRIVATE_UPSTREAM:-false}
+  API_ADMIN_TRUSTED_PROXIES: ${API_ADMIN_TRUSTED_PROXIES:-}
+  SESSION_SECURE_COOKIE: "true"
+  DB_CONNECTION: pgsql
+  DB_HOST: postgres
+  DB_PORT: 5432
+  DB_DATABASE: api_admin
+  DB_USERNAME: api_admin
+  DB_PASSWORD: ${DB_PASSWORD:?Set a unique database password}
+  CACHE_STORE: redis
+  SESSION_DRIVER: redis
+  QUEUE_CONNECTION: redis
+  REDIS_CLIENT: phpredis
+  REDIS_HOST: redis
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?Set a unique Redis password}
+
+x-app: &app
+  <<: *security
+  image: ${APP_IMAGE:?Set an immutable production application image}
+  init: true
+  stop_signal: SIGTERM
+  user: "82:82"
+  environment: *env
+  volumes: [app_state:/var/www/html/storage]
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=64m,uid=82,gid=82
+    - /var/www/html/bootstrap/cache:rw,noexec,nosuid,size=16m,uid=82,gid=82
+  networks: [backends, egress]
+  restart: unless-stopped
+
+services:
+  init:
+    <<: *app
+    user: root
+    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE]
+    command: [sh, docker/init-runtime.sh]
+    restart: "no"
+    healthcheck: {disable: true}
+
+  migrate:
+    <<: *app
+    command: [php, artisan, migrate, --force]
+    depends_on:
+      init: {condition: service_completed_successfully}
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    restart: "no"
+    healthcheck: {disable: true}
+
+  api-admin-fpm:
+    <<: *app
+    stop_signal: SIGQUIT
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, sh, docker/healthcheck.sh]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  queue:
+    <<: *app
+    command: [php, artisan, queue:work, --sleep=3, --tries=3, --timeout=60, --max-time=3600]
+    stop_grace_period: 90s
+    depends_on:
+      api-admin-fpm: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, php, docker/health.php]
+      interval: 30s
+      timeout: 10s
+
+  scheduler:
+    <<: *app
+    command: [php, artisan, schedule:work]
+    stop_grace_period: 90s
+    depends_on:
+      api-admin-fpm: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, php, docker/health.php]
+      interval: 30s
+      timeout: 10s
+
+  web:
+    <<: *security
+    image: ${WEB_IMAGE:?Set the matching immutable web image}
+    user: "82:82"
+    # TLS is terminated by the host ingress. HTTP never binds a public interface.
+    ports: ["127.0.0.1:${APP_PORT:-8080}:8080"]
+    volumes:
+      - type: volume
+        source: app_state
+        target: /var/www/html/public/storage
+        read_only: true
+        volume:
+          subpath: app/public
+          nocopy: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m,uid=82,gid=82"]
+    networks: [egress]
+    depends_on:
+      api-admin-fpm: {condition: service_healthy}
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/ready]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  postgres:
+    <<: *security
+    image: postgres:18-alpine
+    # The official entrypoint initializes/chowns its private data volume, then drops root.
+    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE, SETUID, SETGID]
+    environment:
+      POSTGRES_DB: api_admin
+      POSTGRES_USER: api_admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set a unique database password}
+      PGDATA: /var/lib/postgresql/18/docker
+    volumes: [postgres_data:/var/lib/postgresql]
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m", "/var/run/postgresql:rw,nosuid,size=16m"]
+    networks: [backends]
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, pg_isready, -U, api_admin, -d, api_admin]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    <<: *security
+    image: redis:8.6-alpine
+    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE, SETUID, SETGID]
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?Set a unique Redis password}
+    command: [sh, -c, 'exec docker-entrypoint.sh redis-server --appendonly yes --appendfsync everysec --maxmemory 256mb --maxmemory-policy noeviction --requirepass "$$REDISCLI_AUTH"']
+    volumes: [redis_data:/data]
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+    networks: [backends]
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  app_state:
+  postgres_data:
+  redis_data:
+
+networks:
+  backends: {internal: true}
+  egress:

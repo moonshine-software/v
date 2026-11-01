@@ -1,0 +1,23 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\ApiAdmin\Fields\Custom;
+
+{{useStatements}}
+
+/**
+ * Auto-generated custom MoonShine field.
+ *
+ * Extends a built-in field primitive with project-specific tweaks.
+ * The `create_field` MCP tool scaffolds the class body from a
+ * `methods_override` / `properties` spec; hand-edit at will —
+ * `update_field` rewrites the file as a whole, so stash overrides
+ * somewhere re-insertable (a small wrapper class, a MoonShine
+ * macro, or an additional override block).
+ */
+final class {{className}} extends {{parentClass}}
+{
+{{properties}}
+{{overrideMethods}}
+}

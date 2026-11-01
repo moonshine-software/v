@@ -1,0 +1,35 @@
+name: Production container smoke
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: production
+          tags: moonshine-v:production-smoke
+          load: true
+          cache-from: type=gha,scope=php
+          cache-to: type=gha,scope=php,mode=max
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: web
+          tags: moonshine-v:web-smoke
+          load: true
+          cache-from: type=gha,scope=php
+      - run: bash docker/smoke.sh

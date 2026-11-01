@@ -1,0 +1,17 @@
+{
+  "_comment": "Keep only the server matching your setup. For the interactive installer, use the generated .moonshine-install/mcp.json instead. Replace the absolute artisan path for a source installation.",
+
+  "mcpServers": {
+    "moonshine-v": {
+      "_comment_docker": "For the development stack in docker/docker-compose.yml. docker exec takes the container name, not the Compose service name.",
+      "command": "docker",
+      "args": ["exec", "-i", "moonshine-api-admin-fpm", "php", "artisan", "api-admin:mcp-server"]
+    },
+
+    "moonshine-v-local": {
+      "_comment_local": "For a source installation on the host. Use the absolute path to artisan.",
+      "command": "php",
+      "args": ["/absolute/path/to/v/artisan", "api-admin:mcp-server"]
+    }
+  }
+}

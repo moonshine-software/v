@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use MoonShine\Contracts\UI\FieldContract;
+use App\ApiAdmin\Pages\RestIndexPage as IndexPage;
+use {{ resourceNamespace }}\{{ resourceClass }};
+{{ useStatements }}
+
+/**
+ * @extends IndexPage<{{ resourceClass }}>
+ */
+final class {{ className }} extends IndexPage
+{
+    protected bool $isLazy = true;
+
+    /**
+     * @return list<FieldContract>
+     */
+    protected function fields(): iterable
+    {
+        return [
+{{ indexFields }}
+        ];
+    }
+
+    /**
+     * @return list<FieldContract>
+     */
+    protected function filters(): iterable
+    {
+        return [
+{{ filterFields }}
+        ];
+    }
+}

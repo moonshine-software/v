@@ -1,0 +1,34 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use {{ modelClass }};
+use {{ resourceClass }};
+use MoonShine\Contracts\Core\TypeCasts\DataWrapperContract;
+use MoonShine\Contracts\UI\ComponentContract;
+use MoonShine\Contracts\UI\FieldContract;
+use MoonShine\Laravel\Pages\Crud\FormPage;
+use MoonShine\UI\Components\Layout\Box;
+{{ fieldUses }}use Override;
+
+/**
+ * @extends FormPage<{{ resourceShort }}, {{ modelShort }}>
+ */
+final class {{ className }} extends FormPage
+{
+    /**
+     * @return list<ComponentContract|FieldContract>
+     */
+    #[Override]
+    protected function fields(): iterable
+    {
+        return [
+            Box::make([
+{{ fields }}
+            ]),
+        ];
+    }
+{{ rulesMethod }}
+}

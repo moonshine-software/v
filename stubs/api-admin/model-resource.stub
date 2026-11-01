@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use {{ modelClass }};
+use {{ namespace }}\Pages\{{ indexPageClass }};
+use {{ namespace }}\Pages\{{ formPageClass }};
+{{ detailPageUse }}use MoonShine\MultiPanels\MultiPanelResource;
+{{ attributeUses }}{{ actionUses }}{{ overrideUse }}
+/**
+ * @extends MultiPanelResource<{{ modelShort }}, {{ indexPageClass }}, {{ formPageClass }}, {{ detailPageGeneric }}>
+ */
+{{ attributes }}final class {{ className }} extends MultiPanelResource
+{
+{{ modelProperty }}
+{{ panelProperty }}
+{{ titleProperty }}
+{{ columnProperty }}
+{{ pagesMethod }}
+{{ searchMethod }}
+{{ actionsMethod }}
+}

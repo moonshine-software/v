@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\ApiAdmin\Components\Custom;
+
+use MoonShine\UI\Components\MoonShineComponent;
+
+/**
+ * Auto-generated custom MoonShine component.
+ *
+ * Extends MoonShineComponent (or the caller-provided parent) with
+ * project-specific markup. Blade view lives alongside at
+ * `resources/views/api-admin/components/custom/{{viewName}}.blade.php`.
+ */
+final class {{className}} extends {{parentClass}}
+{
+    protected string $view = '{{viewPath}}';
+
+{{properties}}
+}

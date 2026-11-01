@@ -1,0 +1,11 @@
+#!/bin/sh
+# Pre-push: full composer ai:validate (pint + rector + audit + stan + tests).
+
+set -e
+
+if [ -x /usr/local/bin/php ] && [ "$(/usr/local/bin/php -r 'echo PHP_VERSION_ID;')" -ge 80500 ]; then
+    PATH=/usr/local/bin:$PATH
+    export PATH
+fi
+
+composer ai:validate --ansi

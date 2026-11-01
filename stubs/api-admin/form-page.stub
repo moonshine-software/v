@@ -1,0 +1,29 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use MoonShine\Contracts\UI\ComponentContract;
+use MoonShine\Contracts\UI\FieldContract;
+use MoonShine\UI\Components\Layout\Box;
+use App\ApiAdmin\Pages\RestFormPage;
+use {{ resourceNamespace }}\{{ resourceClass }};
+{{ useStatements }}
+
+/**
+ * @extends RestFormPage<{{ resourceClass }}>
+ */
+final class {{ className }} extends RestFormPage
+{
+    /**
+     * @return list<ComponentContract|FieldContract>
+     */
+    protected function fields(): iterable
+    {
+        return [
+{{ formLayout }}
+        ];
+    }
+{{ rulesMethod }}
+}

@@ -1,0 +1,29 @@
+{
+    "$schema": "https://www.schemastore.org/package.json",
+    "name": "moonshine-api-admin",
+    "version": "0.1.0-dev",
+    "private": true,
+    "type": "module",
+    "files": [
+        "scripts/install.mjs"
+    ],
+    "bin": {
+        "moonshine-v-install": "scripts/install.mjs"
+    },
+    "scripts": {
+        "build": "vite build",
+        "dev": "vite",
+        "test:e2e": "playwright test --config tests/e2e/playwright.config.mjs",
+        "test:installer": "node --test scripts/tests/*.test.mjs",
+        "test:installer:docker": "node scripts/tests/install-docker.mjs"
+    },
+    "devDependencies": {
+        "@playwright/test": "1.64.1",
+        "@tailwindcss/vite": "^4.0.0",
+        "axios": "^1.11.0",
+        "concurrently": "^9.0.1",
+        "laravel-vite-plugin": "^3.0.0",
+        "tailwindcss": "^4.0.0",
+        "vite": "^8.0.0"
+    }
+}

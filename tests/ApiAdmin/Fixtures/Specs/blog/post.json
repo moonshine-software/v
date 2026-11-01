@@ -1,0 +1,8 @@
+{
+    "endpoint": "/posts",
+    "fields": [
+        { "column": "id", "type": "id" },
+        { "column": "title", "type": "text", "methods": ["sortable", "required"] },
+        { "column": "body", "type": "textarea" }
+    ]
+}

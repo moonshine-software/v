@@ -1,0 +1,41 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'name' => '{{ serviceName }}',
+    'base_url' => env('{{ envPrefix }}_API_URL', '{{ baseUrl }}'),
+    'api_key' => env('{{ envPrefix }}_API_KEY', '{{ apiKey }}'),
+    'panel' => '{{ panel }}',
+    'auth_type' => '{{ authType }}',
+    'auth_header' => '{{ authHeader }}',
+    'health_path' => env('{{ envPrefix }}_HEALTH_PATH', '{{ healthPath }}'),
+    'token_url' => env('{{ envPrefix }}_OAUTH_TOKEN_URL', '{{ tokenUrl }}'),
+    'oauth_client_id' => env('{{ envPrefix }}_OAUTH_CLIENT_ID', '{{ oauthClientId }}'),
+    'oauth_client_secret' => env('{{ envPrefix }}_OAUTH_CLIENT_SECRET', '{{ oauthClientSecret }}'),
+    'oauth_scope' => env('{{ envPrefix }}_OAUTH_SCOPE', '{{ oauthScope }}'),
+    'admin_login' => {{ adminLogin }},
+    'admin_auth' => {{ adminAuth }},
+    'realtime' => [
+        'enabled' => {{ realtimeEnabled }},
+        'webhook_secret' => env('{{ envPrefix }}_WEBHOOK_SECRET', ''),
+        'webhook_signature_header' => '{{ webhookSignatureHeader }}',
+        'webhook_signature_algo' => '{{ webhookSignatureAlgo }}',
+        'webhook_event_key' => '{{ webhookEventKey }}',
+        'webhook_resource_key' => '{{ webhookResourceKey }}',
+        'webhook_action_key' => '{{ webhookActionKey }}',
+        'webhook_id_key' => '{{ webhookIdKey }}',
+        'allowed_events' => {{ allowedEvents }},
+        'refresh_debounce_ms' => {{ refreshDebounceMs }},
+        'refresh_strategy' => '{{ refreshStrategy }}',
+        'sensitive_payload_keys' => {{ sensitivePayloadKeys }},
+    ],
+    'response_mapping' => [
+        'data_key' => '{{ dataKey }}',
+        'total_key' => '{{ totalKey }}',
+        'per_page_key' => '{{ perPageKey }}',
+        'current_page_key' => '{{ currentPageKey }}',
+        'last_page_key' => '{{ lastPageKey }}',
+        'primary_key' => '{{ primaryKey }}',
+    ],
+];

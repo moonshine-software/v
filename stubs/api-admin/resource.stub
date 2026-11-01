@@ -1,0 +1,49 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use {{ namespace }}\Pages\{{ resourceBaseName }}DetailPage;
+use {{ namespace }}\Pages\{{ resourceBaseName }}FormPage;
+use {{ namespace }}\Pages\{{ resourceBaseName }}IndexPage;
+use App\ApiAdmin\Providers\ApiAdminServiceProvider;
+use App\ApiAdmin\Resources\MultiPanelRestResource;
+use App\ApiAdmin\ServiceConfig\ServiceConfig;
+{{ iconUse }}
+{{ iconAttribute }}
+class {{ className }} extends MultiPanelRestResource
+{
+    protected string $panel = '{{ panel }}';
+
+    protected string $title = '{{ title }}';
+{{ groupMethod }}
+    protected function resolveServiceConfig(): ServiceConfig
+    {
+        return ApiAdminServiceProvider::resolveService('{{ serviceName }}');
+    }
+
+    protected function endpoint(): string
+    {
+        return '{{ endpoint }}';
+    }
+
+    protected function pages(): array
+    {
+        return [
+            {{ resourceBaseName }}IndexPage::class,
+            {{ resourceBaseName }}FormPage::class,
+            {{ resourceBaseName }}DetailPage::class,
+        ];
+    }
+
+    protected function search(): array
+    {
+        return [{{ searchFields }}];
+    }
+{{ actionsMethod }}
+{{ mutationsProperty }}
+{{ defaultQueryProperty }}
+{{ indexRequestProperty }}
+{{ detailStrategyOverrideMethod }}
+}

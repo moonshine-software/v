@@ -1,0 +1,18 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: max
+    paths:
+        - app
+        - tests
+    # Paths that behave like Laravel config files — pure `return [...]` with
+    # env() reads, loaded via include at runtime. larastan's default config
+    # detection only covers config/; the MCP-generated service configs live
+    # under app/MoonShine/ApiAdmin/Configs by design (they're service-scoped
+    # rather than application-scoped) but are semantically config files.
+    configDirectories:
+        - app/MoonShine/ApiAdmin/Configs
+    excludePaths: []
+    ignoreErrors: []
+    reportUnmatchedIgnoredErrors: false

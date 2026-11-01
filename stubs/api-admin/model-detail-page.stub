@@ -1,0 +1,27 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use {{ resourceClass }};
+use MoonShine\Contracts\UI\FieldContract;
+use MoonShine\Laravel\Pages\Crud\DetailPage;
+{{ fieldUses }}use Override;
+
+/**
+ * @extends DetailPage<{{ resourceShort }}>
+ */
+final class {{ className }} extends DetailPage
+{
+    /**
+     * @return list<FieldContract>
+     */
+    #[Override]
+    protected function fields(): iterable
+    {
+        return [
+{{ fields }}
+        ];
+    }
+}

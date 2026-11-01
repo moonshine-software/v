@@ -1,0 +1,51 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use {{ namespace }}\Pages\{{ resourceBaseName }}DetailPage;
+use {{ namespace }}\Pages\{{ resourceBaseName }}FormPage;
+use {{ namespace }}\Pages\{{ resourceBaseName }}IndexPage;
+use App\ApiAdmin\Providers\ApiAdminServiceProvider;
+use App\ApiAdmin\Resources\AbstractRestResource;
+use App\ApiAdmin\ServiceConfig\ServiceConfig;
+
+/**
+ * REST relation resource.
+ *
+ * Used as a related resource by RestHasMany/RestHasOne in the parent resource.
+ */
+class {{ className }} extends AbstractRestResource
+{
+    protected string $title = '{{ title }}';
+
+    protected function resolveServiceConfig(): ServiceConfig
+    {
+        return ApiAdminServiceProvider::resolveService('{{ serviceName }}');
+    }
+
+    protected function endpoint(): string
+    {
+        return '{{ endpoint }}';
+    }
+
+    protected function pages(): array
+    {
+        return [
+            {{ resourceBaseName }}IndexPage::class,
+            {{ resourceBaseName }}FormPage::class,
+            {{ resourceBaseName }}DetailPage::class,
+        ];
+    }
+
+    protected function search(): array
+    {
+        return [];
+    }
+{{ actionsMethod }}
+{{ mutationsProperty }}
+{{ defaultQueryProperty }}
+{{ indexRequestProperty }}
+{{ detailStrategyOverrideMethod }}
+}

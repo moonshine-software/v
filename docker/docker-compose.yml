@@ -1,0 +1,136 @@
+name: ${COMPOSE_PROJECT_NAME:-moonshine-api-admin}
+
+x-api-admin-build: &api-admin-build
+  context: ..
+  dockerfile: docker/Dockerfile
+  target: app
+
+x-api-admin-env: &api-admin-env
+  APP_ENV: ${APP_ENV:-local}
+  APP_DEBUG: ${APP_DEBUG:-true}
+  APP_KEY: ${APP_KEY:-}
+  APP_URL: ${APP_URL:-http://localhost:8080}
+  LOG_CHANNEL: ${LOG_CHANNEL:-stderr}
+  LOG_LEVEL: ${LOG_LEVEL:-debug}
+  API_ADMIN_LOG_LEVEL: ${API_ADMIN_LOG_LEVEL:-debug}
+  DB_CONNECTION: ${DB_CONNECTION:-pgsql}
+  DB_HOST: ${DB_HOST:-postgres}
+  DB_PORT: ${DB_PORT:-5432}
+  DB_DATABASE: ${DB_DATABASE:-moonshine_api_admin}
+  DB_USERNAME: ${DB_USERNAME:-moonshine_api_admin}
+  DB_PASSWORD: ${DB_PASSWORD:-moonshine_api_admin}
+  CACHE_STORE: ${CACHE_STORE:-redis}
+  SESSION_DRIVER: ${SESSION_DRIVER:-redis}
+  QUEUE_CONNECTION: ${QUEUE_CONNECTION:-redis}
+  REDIS_CLIENT: ${REDIS_CLIENT:-phpredis}
+  REDIS_HOST: ${REDIS_HOST:-redis}
+  REDIS_PASSWORD: ${REDIS_PASSWORD:-null}
+  REDIS_PORT: ${REDIS_PORT:-6379}
+
+services:
+  angie:
+    image: docker.angie.software/angie:1.11.4-alpine
+    container_name: moonshine-api-admin-angie
+    ports:
+      - "${APP_PORT:-8080}:80"
+      - "${HTTPS_PORT:-8443}:443"
+    depends_on:
+      api-admin-fpm:
+        condition: service_started
+    volumes:
+      - ./angie/angie.conf:/etc/angie/angie.conf:ro
+      - ./angie/conf.d:/etc/angie/conf.d:ro
+      - ../public:/var/www/html/public:ro
+      - angie_acme:/var/lib/angie/acme
+    post_start:
+      - command: chown -R angie:angie /var/lib/angie/acme
+        user: root
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/up >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  api-admin-fpm:
+    build:
+      <<: *api-admin-build
+    container_name: moonshine-api-admin-fpm
+    expose:
+      - "9000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      moonshine-api-admin-migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *api-admin-env
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      # Mount generated resources for live editing during MCP operations
+      - ../app/MoonShine:/var/www/html/app/MoonShine
+      - api_admin_generated:/var/www/html/storage/api-admin
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "sh", "docker/healthcheck.sh"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  moonshine-api-admin-migrate:
+    build:
+      <<: *api-admin-build
+    command: php artisan migrate --force
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *api-admin-env
+    env_file:
+      - path: .env
+        required: false
+    restart: "no"
+
+  postgres:
+    image: postgres:18.3-alpine
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-moonshine_api_admin}
+      POSTGRES_USER: ${DB_USERNAME:-moonshine_api_admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-moonshine_api_admin}
+      PGDATA: /var/lib/postgresql/18/docker
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:8.6-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  angie_acme:
+  api_admin_generated:
+  postgres_data:
+  redis_data:
