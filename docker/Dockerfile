@@ -34,7 +34,7 @@ FROM base AS deps
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
 
-FROM node:24-alpine AS frontend
+FROM node:26-alpine AS frontend
 WORKDIR /build
 COPY package.json package-lock.json ./
 RUN npm ci
