@@ -847,7 +847,7 @@ abstract class AbstractRestResource extends CrudResource
         Log::debug('AbstractRestResource::save — payload prepared', [
             'resource' => static::class,
             'is_new' => $isNew,
-            'payload' => $data,
+            'payload_keys' => array_keys($data),
         ]);
 
         $itemKey = $item->getKey() ?? '';

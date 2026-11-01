@@ -81,6 +81,25 @@ test('hosted OAuth completes PKCE login, restores the session and renders the co
     await expect(page.locator('aside img[src="/vendor/moonshine/logo.svg"]')).toHaveCount(1);
 });
 
+test('hosted onboarding opens the generated panel inside the current tenant', async ({ page }) => {
+    await signInAsMember(page);
+    await page.goto(`${HUB}/page/instructor-page`);
+    await page.getByRole('button', { name: 'Reset instructor state' }).click();
+    await page.locator('#base_url').fill(`http://127.0.0.1:${API_PORTS.blog}/v1`);
+    await page.locator('#service_name').fill('hosted_wizard');
+    await page.locator('#resource_name').fill('post');
+    await page.locator('#endpoint_paths').fill('/posts');
+    await page.getByRole('button', { name: 'Probe API' }).click();
+    await page.getByRole('button', { name: 'Generate service and resource' }).click();
+
+    const panel = page.getByRole('link', { name: 'Open generated panel' });
+    await expect(panel).toHaveAttribute('href', '/t/acme/hosted_wizard-admin');
+    await panel.click();
+    await expect(page).toHaveURL(`${HOSTED_URL}/t/acme/hosted_wizard-admin`);
+    await page.locator('aside').getByRole('link', { name: 'Posts' }).click();
+    await expect(page.locator('main table:visible').first()).toContainText('Post 1');
+});
+
 test('PAT login masks the token, preserves its case and accepts no refresh token', async ({ page }) => {
     const panel = `${HOSTED_URL}/t/acme/hosted-pat-admin`;
     await page.goto(`${panel}/login`);

@@ -7,6 +7,7 @@ namespace App\ApiAdmin\Instructor;
 use App\ApiAdmin\MCP\GenerationTransaction;
 use App\ApiAdmin\MCP\McpServer;
 use App\ApiAdmin\MCP\ServiceRegistry;
+use App\ApiAdmin\Tenancy\TenantRoutes;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -130,7 +131,7 @@ final readonly class InstructorApplyService
                 'panel' => $panel,
                 'files' => array_values(array_unique($files)),
                 'resource_results' => $resourceResults,
-                'next_url' => '/'.$panel,
+                'next_url' => '/'.TenantRoutes::expandPrefix(TenantRoutes::scopedPrefix($panel)),
             ];
         } catch (Throwable $e) {
             Log::error('InstructorApplyService: apply failed', [

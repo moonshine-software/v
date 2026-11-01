@@ -22,6 +22,13 @@ containers. The first image build can take several minutes.
 
 ## Run the Wizard
 
+The repository is currently private. Collaborators with repository access should
+clone it using their configured GitHub authentication, then run
+`node scripts/install.mjs` from that checkout and choose a new installation
+directory. Git must also have HTTPS access when the wizard clones the installation.
+
+The anonymous command below is for the future public release:
+
 ```sh
 npx --yes --package=https://github.com/moonshine-software/v/archive/refs/heads/main.tar.gz moonshine-v-install
 ```
@@ -29,8 +36,8 @@ npx --yes --package=https://github.com/moonshine-software/v/archive/refs/heads/m
 If Windows PowerShell blocks `npx.ps1` under its execution policy, use `npx.cmd`
 with the same arguments. No execution-policy change is needed.
 
-The installer and source checkout use public HTTPS; no GitHub account, SSH key
-or published npm package is required. Check access with
+After the repository is public, the installer and source checkout use HTTPS
+without a GitHub account, SSH key or published npm package. Check access with
 `git ls-remote https://github.com/moonshine-software/v.git HEAD` if npm reports a
 Git error. Network or repository access failures stop installation without
 switching to SSH. Run it directly in a terminal so the wizard and administrator

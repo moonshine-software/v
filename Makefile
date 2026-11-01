@@ -166,9 +166,9 @@ cache-clear: ## Clear all caches
 	$(ARTISAN) view:clear
 
 .PHONY: optimize
-optimize: ## Cache config, routes, and views for production
-	$(ARTISAN) config:cache
-	$(ARTISAN) route:cache
+optimize: ## Cache views and keep live service/panel discovery enabled
+	$(ARTISAN) config:clear
+	$(ARTISAN) route:clear
 	$(ARTISAN) view:cache
 
 .PHONY: reload

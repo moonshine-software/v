@@ -93,6 +93,9 @@ panels must be discovered on each request. Restart queue/scheduler after updates
 so long-lived processes load the new code. Do not use `composer update` inside
 the deployed container.
 
+`make optimize` clears config/route caches and caches only views, preserving live
+service and panel discovery.
+
 ## Backup, restore and rollback
 
 Backups contain encrypted credentials, generated executable code and Redis

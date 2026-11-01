@@ -164,6 +164,11 @@ sessions still require upstream validation, and actual expired state is rejected
 
 Full rationale and individual fix commands: `.ai-factory/RULES.md`.
 
+REST save diagnostics log payload keys only, never values. Instructor completion
+links use `TenantRoutes` so hosted panels retain the tenant prefix.
+`make optimize` clears config/route caches and caches only views: caching
+configuration or routes prevents live panel discovery.
+
 ## UI Components
 
 - **Always** use the ready-made components from `moonshine/ui` (package `moonshine/ui`, namespace `MoonShine\UI`).

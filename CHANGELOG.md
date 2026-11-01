@@ -6,6 +6,12 @@ Notable changes to MoonShine V. The project follows [Semantic Versioning](https:
 
 First public version.
 
+### Fixed
+
+- REST form saves log payload keys without exposing passwords or nested secrets.
+- Hosted browser onboarding links to the generated panel within the current tenant.
+- `make optimize` preserves live service and panel discovery by caching only views.
+
 ### Added
 
 - REST admin panels generated over MCP for services written in any language, with configurable response mapping, pagination and filtering.

@@ -6,12 +6,14 @@ Last verified: 2026-11-01. This records what was checked and what remains out of
 
 ## Status
 
-The source passed the checks below. No release has been tagged yet.
+The repository remains private by choice. No release has been tagged yet;
+anonymous GitHub/archive access is unavailable until publication. Collaborators
+can use an authenticated checkout as described in the installation guide.
 
 Before tagging a release:
 
 - Recheck the pinned MoonShine commit if upstream has changed.
-- Verify the anonymous `npx` installation and private vulnerability reporting from a clean environment.
+- Once the repository is public, verify the anonymous `npx` installation and private vulnerability reporting from a clean environment.
 
 ## Core and compatibility
 
@@ -24,8 +26,8 @@ Before tagging a release:
 | Check | Result |
 |---|---|
 | `XDEBUG_MODE=off composer ai:validate` | Exit 0: Pint, Rector, production audit, PHPStan level max, PHPUnit |
-| PHPUnit | **891 passed, 4496 assertions**, including real API compatibility and HTTP authorization regressions |
-| Chrome E2E (`npm run test:e2e`) | **43 passed**, including real Django previous/next navigation without invented page metadata |
+| PHPUnit | **892 passed, 4500 assertions**, including real API compatibility, HTTP authorization and secret-free save diagnostics |
+| Chrome E2E (`npm run test:e2e`) | **44 passed**, including hosted onboarding through the generated panel and real Django previous/next navigation |
 | Installer unit tests (`npm run test:installer`) | **16 passed** |
 | Fresh Docker installation (`npm run test:installer:docker`) | Passed: secret exclusion, administrator login, MCP discovery, resume and restart persistence |
 | Production smoke (`docker/smoke.sh`) | Passed: PostgreSQL, Redis, queue, generated state, container recreation, backup/restore, backend outage |
@@ -39,6 +41,9 @@ Hosted MCP was also exercised with the official MCP SDK: handshake, ping, `tools
 
 | Finding | Resolution and evidence |
 |---|---|
+| REST form secrets in debug logs | Save diagnostics record payload keys only. A feature test verifies raw passwords/nested secrets reach the API unchanged and never appear in log events. |
+| Hosted onboarding linked to an unscoped panel | The generated panel URL uses `TenantRoutes`. Chrome covers discovery, generation and opening the resource within the current tenant. |
+| Production Make target froze dynamic panels | `make optimize` clears config/route caches and caches views only. An isolated check starts with both caches populated, runs the target, registers a service and verifies a fresh process discovers its panel. |
 | List lookup silently selected a different record | List-strategy reads require an exact primary-key match. Feature tests cover a single mismatched row and an ignored filter, assert 404/null, and prevent subsequent writes. |
 | Django/Spring pagination mismatch | Django uses mapped `next`/`previous` links without guessing page counts; Spring supports `size` and zero-based upstream pages. Feature tests cover first/middle/last/empty pages, serialization, discovery and generated config; Chrome exercises actual Django navigation. |
 | Browser relation endpoints rejected safe opaque IDs | The shared `PathSegment` validator is used at the browser authorization boundary. HTTP feature tests accept encoded opaque parent/child IDs and reject unsafe paths before outbound requests. |
