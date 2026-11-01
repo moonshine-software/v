@@ -1,4 +1,4 @@
-# moonshine-api-admin
+# MoonShine V
 
 > Build an admin panel for your APIs with an AI agent — or onboard a service directly in the browser.
 
