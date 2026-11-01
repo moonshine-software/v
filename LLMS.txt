@@ -1,11 +1,11 @@
-# moonshine-api-admin — LLM agent guide
+# MoonShine V — LLM agent guide
 
 > AI-driven Laravel admin panel (MoonShine 5) for REST microservices and local Eloquent models.
 > Agents configure admins through an MCP server — never by editing files here.
 
 This file is a fallback for agents that do not automatically consume the
 MCP `initialize.instructions` payload. When talking to the MCP server
-`moonshine-api-admin` (command: `php artisan api-admin:mcp-server`), the
+`moonshine-v` (command: `php artisan api-admin:mcp-server`), the
 same guidance is delivered in-protocol and should be preferred.
 
 Runtime: MoonShine `5.x-dev`, exact commit pinned in `composer.lock`.
@@ -153,6 +153,9 @@ updates the panel branding. Menu items are discovered from resources.
 3. `create_resource(service, name, endpoint, fields[], list_request?, …)`.
    `list_request: {method:"POST", body:{...}}` makes the Index page and
    fetch_resource_items read the list via POST JSON body instead of GET.
+   Prefer a singular `name` ("post"). Singular and plural forms address the
+   same resource in every tool; an existing resource wins, so `posts`
+   regenerates `Post` instead of adding a second resource.
 
 Iterate with `update_resource(...)` (idempotent regeneration) or wipe with
 `remove_resource` / `remove_service` (both destructive, require
@@ -626,7 +629,7 @@ vendor/moonshine for available knobs.
   `children_allowed: bool`, and `is_custom: bool`.
 
 Live JSON snapshots are also published at
-`moonshine-api-admin://fields`, `://components`, `://field-methods` via
+`moonshine-v://fields`, `://components`, `://field-methods` via
 `resources/read` — same payload, usable without paying the tool-call
 overhead.
 

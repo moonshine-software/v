@@ -2,7 +2,7 @@
 
 # MCP Tools Reference
 
-moonshine-api-admin exposes MCP tools for AI agents to manage the admin panel,
+MoonShine V exposes MCP tools for AI agents to manage the admin panel,
 inspect generated resources, read/write resource data, run analytics, and check
 the built-in instructor onboarding status.
 

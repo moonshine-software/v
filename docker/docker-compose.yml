@@ -1,4 +1,4 @@
-name: ${COMPOSE_PROJECT_NAME:-moonshine-api-admin}
+name: ${COMPOSE_PROJECT_NAME:-moonshine-v}
 
 x-api-admin-build: &api-admin-build
   context: ..
@@ -16,9 +16,9 @@ x-api-admin-env: &api-admin-env
   DB_CONNECTION: ${DB_CONNECTION:-pgsql}
   DB_HOST: ${DB_HOST:-postgres}
   DB_PORT: ${DB_PORT:-5432}
-  DB_DATABASE: ${DB_DATABASE:-moonshine_api_admin}
-  DB_USERNAME: ${DB_USERNAME:-moonshine_api_admin}
-  DB_PASSWORD: ${DB_PASSWORD:-moonshine_api_admin}
+  DB_DATABASE: ${DB_DATABASE:-moonshine_v}
+  DB_USERNAME: ${DB_USERNAME:-moonshine_v}
+  DB_PASSWORD: ${DB_PASSWORD:-moonshine_v}
   CACHE_STORE: ${CACHE_STORE:-redis}
   SESSION_DRIVER: ${SESSION_DRIVER:-redis}
   QUEUE_CONNECTION: ${QUEUE_CONNECTION:-redis}
@@ -30,7 +30,7 @@ x-api-admin-env: &api-admin-env
 services:
   angie:
     image: docker.angie.software/angie:1.11.4-alpine
-    container_name: moonshine-api-admin-angie
+    container_name: moonshine-v-angie
     ports:
       - "${APP_PORT:-8080}:80"
       - "${HTTPS_PORT:-8443}:443"
@@ -47,7 +47,8 @@ services:
         user: root
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/up >/dev/null 2>&1 || exit 1"]
+      # 127.0.0.1, not localhost: localhost resolves to ::1 and Angie listens on IPv4 only.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/up >/dev/null 2>&1 || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -55,7 +56,7 @@ services:
   api-admin-fpm:
     build:
       <<: *api-admin-build
-    container_name: moonshine-api-admin-fpm
+    container_name: moonshine-v-fpm
     expose:
       - "9000"
     depends_on:
@@ -63,7 +64,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      moonshine-api-admin-migrate:
+      moonshine-v-migrate:
         condition: service_completed_successfully
     environment:
       <<: *api-admin-env
@@ -81,7 +82,7 @@ services:
       timeout: 5s
       retries: 3
 
-  moonshine-api-admin-migrate:
+  moonshine-v-migrate:
     build:
       <<: *api-admin-build
     command: php artisan migrate --force
@@ -100,9 +101,9 @@ services:
   postgres:
     image: postgres:18.3-alpine
     environment:
-      POSTGRES_DB: ${DB_DATABASE:-moonshine_api_admin}
-      POSTGRES_USER: ${DB_USERNAME:-moonshine_api_admin}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-moonshine_api_admin}
+      POSTGRES_DB: ${DB_DATABASE:-moonshine_v}
+      POSTGRES_USER: ${DB_USERNAME:-moonshine_v}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-moonshine_v}
       PGDATA: /var/lib/postgresql/18/docker
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
@@ -119,7 +120,7 @@ services:
     image: redis:8.6-alpine
     command: redis-server --appendonly yes
     ports:
-      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:

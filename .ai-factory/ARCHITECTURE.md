@@ -1,7 +1,7 @@
 # Architecture: Modular Monolith
 
 ## Overview
-The moonshine-api-admin application follows a Modular Monolith architecture where each concern (Resources, Fields, TypeCasts, MCP, Validation, Realtime) is a self-contained module with clear boundaries and explicit public APIs. All modules ship in one Laravel application but maintain strict internal separation.
+The MoonShine V application follows a Modular Monolith architecture where each concern (Resources, Fields, TypeCasts, MCP, Validation, Realtime) is a self-contained module with clear boundaries and explicit public APIs. All modules ship in one Laravel application but maintain strict internal separation.
 
 This pattern was chosen because the application has distinct functional areas (HTTP resource management, relation fields, API casting, realtime webhook ingestion, MCP code generation) that benefit from isolation, but deploying them as independent services would add unnecessary complexity.
 

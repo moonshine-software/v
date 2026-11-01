@@ -117,10 +117,10 @@ final readonly class HostedMcpController
                     'tools' => new stdClass,
                 ],
                 'serverInfo' => [
-                    'name' => 'moonshine-api-admin-hosted',
+                    'name' => 'moonshine-v-hosted',
                     'version' => '0.1.0',
                 ],
-                'instructions' => 'Hosted moonshine-api-admin MCP. Requests are authenticated with a tenant-bound bearer token; tools run only inside that tenant context.',
+                'instructions' => 'Hosted moonshine-v MCP. Requests are authenticated with a tenant-bound bearer token; tools run only inside that tenant context.',
             ]);
         }
 

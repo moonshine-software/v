@@ -10,7 +10,6 @@ use App\ApiAdmin\MCP\ServiceRegistry;
 use App\ApiAdmin\MCP\SpecStore\SpecStore;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -133,13 +132,7 @@ final class AddFieldTool implements ToolContract
             ];
         }
 
-        $registry = new ServiceRegistry;
-        $resources = $registry->listResources($service);
-        $match = array_find(
-            $resources,
-            fn ($r): bool => $r['name'] === Str::snake($resource)
-                || $r['base_name'] === Str::studly(Str::singular($resource)),
-        );
+        $match = (new ServiceRegistry)->findResource($service, $resource);
 
         if ($match === null) {
             return [

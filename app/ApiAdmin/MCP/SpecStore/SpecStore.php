@@ -42,8 +42,17 @@ final class SpecStore
 
         $safeService = (string) preg_replace('/[^a-zA-Z0-9_-]/', '_', $service);
         $safeResource = (string) preg_replace('/[^a-zA-Z0-9_-]/', '_', $resource);
+        $directory = $root.'/'.$safeService;
 
-        return $root.'/'.$safeService.'/'.$safeResource.'.json';
+        // One resource keeps one sidecar whichever form of its name the caller
+        // uses; see ServiceRegistry::resourceBaseName().
+        foreach ([$safeResource, Str::singular($safeResource), Str::plural($safeResource)] as $candidate) {
+            if (File::exists($directory.'/'.$candidate.'.json')) {
+                return $directory.'/'.$candidate.'.json';
+            }
+        }
+
+        return $directory.'/'.$safeResource.'.json';
     }
 
     public static function exists(string $service, string $resource): bool

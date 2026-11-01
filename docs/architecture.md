@@ -4,7 +4,7 @@
 
 ## Overview
 
-moonshine-api-admin follows a **Modular Monolith** architecture. Each concern is a self-contained module with clear boundaries inside one Laravel application, shipped as Docker images.
+MoonShine V follows a **Modular Monolith** architecture. Each concern is a self-contained module with clear boundaries inside one Laravel application that runs in Docker.
 
 ```
 ┌─────────────────────────────────────────────────────────┐

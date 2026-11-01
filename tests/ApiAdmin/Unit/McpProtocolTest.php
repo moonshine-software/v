@@ -357,7 +357,7 @@ final class McpProtocolTest extends TestCase
                 'jsonrpc' => '2.0',
                 'id' => 11,
                 'method' => 'resources/read',
-                'params' => ['uri' => 'moonshine-api-admin://llms'],
+                'params' => ['uri' => 'moonshine-v://llms'],
             ]),
         ];
 
@@ -394,12 +394,12 @@ final class McpProtocolTest extends TestCase
         $this->assertNotEmpty($resources, 'at least one resource must be advertised');
 
         $uris = array_column($resources, 'uri');
-        $this->assertContains('moonshine-api-admin://llms', $uris);
+        $this->assertContains('moonshine-v://llms', $uris);
         // Introspection snapshots must also be advertised so agents can
         // read the live field/component catalog without running tools.
-        $this->assertContains('moonshine-api-admin://fields', $uris);
-        $this->assertContains('moonshine-api-admin://components', $uris);
-        $this->assertContains('moonshine-api-admin://field-methods', $uris);
+        $this->assertContains('moonshine-v://fields', $uris);
+        $this->assertContains('moonshine-v://components', $uris);
+        $this->assertContains('moonshine-v://field-methods', $uris);
 
         // resources/read echoes the URI and returns the markdown body.
         $readResult = $responses[2];
@@ -410,10 +410,10 @@ final class McpProtocolTest extends TestCase
         $this->assertCount(1, $contents);
         $entry = $contents[0];
         $this->assertIsArray($entry);
-        $this->assertSame('moonshine-api-admin://llms', $entry['uri']);
+        $this->assertSame('moonshine-v://llms', $entry['uri']);
         $this->assertSame('text/markdown', $entry['mimeType']);
         $this->assertIsString($entry['text']);
-        $this->assertStringContainsString('moonshine-api-admin', $entry['text']);
+        $this->assertStringContainsString('moonshine-v', $entry['text']);
     }
 
     /**
@@ -430,9 +430,9 @@ final class McpProtocolTest extends TestCase
         $this->assertNotFalse($artisan);
 
         $uris = [
-            'moonshine-api-admin://fields',
-            'moonshine-api-admin://components',
-            'moonshine-api-admin://field-methods',
+            'moonshine-v://fields',
+            'moonshine-v://components',
+            'moonshine-v://field-methods',
         ];
 
         $descriptors = [

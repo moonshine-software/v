@@ -37,7 +37,7 @@ final readonly class ResourceLocator
     public function resolveClass(string $service, string $resource): string
     {
         $studlyService = Str::studly($service);
-        $studlyResource = Str::studly(Str::singular($resource));
+        $studlyResource = $this->registry->resourceBaseName($service, $resource);
         $namespace = config('api-admin.resources_namespace', 'App\\MoonShine\\ApiAdmin\\Resources');
         $namespace = is_string($namespace) ? $namespace : 'App\\MoonShine\\ApiAdmin\\Resources';
         $fqn = "{$namespace}\\{$studlyService}\\{$studlyResource}\\{$studlyResource}Resource";

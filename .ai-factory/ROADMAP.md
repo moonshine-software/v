@@ -1,13 +1,13 @@
 # Project Roadmap
 
-> Free, AI-driven admin panel for REST APIs, shipped as a Docker image. Developer talks to an MCP-connected agent; agent builds multi-service admin without touching moonshine-v source.
+> Free, AI-driven admin panel for REST APIs that runs in Docker. Developer talks to an MCP-connected agent; agent builds multi-service admin without touching moonshine-v source.
 
 ## Milestones
 
 - [x] **REST Admin Foundation** — HTTP-based CRUD resources (`AbstractRestResource`), multi-panel routing, MoonShine UI integration, two-layer validation (Laravel rules + API 422 mapping)
 - [x] **MCP Builder Surface** — 10 tools for service registration (`register_service`, `probe_endpoint`), resource generation (`create_resource`, `update_resource`), layout config (`configure_layout`), removal (`remove_service`, `remove_resource`), and diagnostics (`list_services`, `list_resources`, `health_check`)
 - [x] **Layout + Field Presets** — `Box`/`Tabs`/`Grid` layout trees, per-mode `rules`/`methods` (create vs update), per-resource `detail_strategy` override, password `->raw()`, recursive AST layout
-- [x] **MCP Introspection Surface** — `list_fields`, `describe_field_type`, `list_field_methods`, `list_components` + live JSON resources (`moonshine-api-admin://fields|components|field-methods|llms`)
+- [x] **MCP Introspection Surface** — `list_fields`, `describe_field_type`, `list_field_methods`, `list_components` + live JSON resources (`moonshine-v://fields|components|field-methods|llms`)
 - [x] **MCP Runtime Data Surface (read)** — `fetch_resource_items` / `fetch_resource_item` honoring `mutations.*`, per-resource `detail_strategy`, `parent_context` for relations, filter/sort discoverability
 - [x] **MCP CRUD Write Surface** — `create_resource_item` / `update_resource_item` / `delete_resource_item` with `actions` allowlist, mutations routing, `confirm: true` guard on destructive
 - [x] **MCP Custom Extension Surface** — `create/update/delete_field` + `create/update/delete_component` with stub-based generators, spec-sidecar usage guards, `force` override

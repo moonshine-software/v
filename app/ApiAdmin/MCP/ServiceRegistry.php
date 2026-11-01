@@ -206,6 +206,43 @@ final class ServiceRegistry
     }
 
     /**
+     * Directory and class base name of a generated resource.
+     *
+     * Agents use singular and plural names interchangeably, so an existing
+     * resource wins over a new directory for the other form: "categories" and
+     * "category" address the same resource whichever one created it. Without an
+     * existing resource the name is used as given.
+     */
+    public function resourceBaseName(string $service, string $name): string
+    {
+        $serviceDir = $this->resourcesPath().'/'.Str::studly($service);
+        $exact = Str::studly($name);
+
+        foreach ([$exact, Str::studly(Str::singular($name)), Str::studly(Str::plural($name))] as $candidate) {
+            if (File::isDirectory($serviceDir.'/'.$candidate)) {
+                return $candidate;
+            }
+        }
+
+        return $exact;
+    }
+
+    /**
+     * Listing entry of one resource, resolved by {@see resourceBaseName()}.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findResource(string $service, string $name): ?array
+    {
+        $baseName = $this->resourceBaseName($service, $name);
+
+        return array_find(
+            $this->listResources($service),
+            static fn (array $resource): bool => $resource['base_name'] === $baseName,
+        );
+    }
+
+    /**
      * Remove a service completely:
      *   - Resources/{Service}/*
      *   - Configs/{Service}Config.php
@@ -276,7 +313,7 @@ final class ServiceRegistry
     {
         $this->assertServiceVisibleToCurrentTenant($service);
 
-        $resourceDir = $this->resourcesPath().'/'.Str::studly($service).'/'.Str::studly(Str::singular($name));
+        $resourceDir = $this->resourcesPath().'/'.Str::studly($service).'/'.$this->resourceBaseName($service, $name);
 
         $removed = [
             'service' => $service,

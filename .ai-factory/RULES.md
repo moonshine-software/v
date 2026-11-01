@@ -1,7 +1,6 @@
 # Project Rules
 
 Project-specific conventions that **override** generic skill defaults.
-Skill-context rules under `.ai-factory/skill-context/` apply on top.
 
 ## Quality gate
 
@@ -42,8 +41,5 @@ Each step must pass with zero new errors. Specifically:
 
 ## When the rule conflicts with skill defaults
 
-`composer ai:validate` is the project-level minimum. Skill-context rules
-under `.ai-factory/skill-context/aif-implement/SKILL.md` (when present)
-add project-specific implementation conventions on top of the skill's
-own defaults. A skill's optional or relaxed checks do not waive the
-`ai:validate` gate.
+`composer ai:validate` is the project-level minimum. A skill's optional or
+relaxed checks do not waive the `ai:validate` gate.

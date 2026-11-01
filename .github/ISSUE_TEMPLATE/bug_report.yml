@@ -1,0 +1,58 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Remove credentials, personal data and tenant secrets from everything you paste. Report vulnerabilities privately, as described in SECURITY.md.
+  - type: input
+    id: commit
+    attributes:
+      label: Source commit
+      description: Output of `git rev-parse HEAD`, or `node scripts/install.mjs --status` for an installer setup.
+    validations:
+      required: true
+  - type: dropdown
+    id: setup
+    attributes:
+      label: Setup
+      options:
+        - Interactive installer
+        - Source installation
+        - Development Docker
+        - Production Compose stack
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options:
+        - local
+        - hosted
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: PHP, Node.js and Docker versions that apply to your setup, and the MCP client if one is involved.
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Use a minimal example API and synthetic data. For MCP problems, include the tool call and its response.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true

@@ -138,7 +138,7 @@ final class HostedEditionSmokeTest extends TestCase
             ]);
 
         $initialize->assertOk();
-        $initialize->assertJsonPath('result.serverInfo.name', 'moonshine-api-admin-hosted');
+        $initialize->assertJsonPath('result.serverInfo.name', 'moonshine-v-hosted');
 
         $health = $this
             ->withToken('acme-token')

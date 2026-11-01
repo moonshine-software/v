@@ -50,7 +50,7 @@ final class CreateResourceTool implements ToolContract
                     ],
                     'name' => [
                         'type' => 'string',
-                        'description' => 'Resource name (e.g. "post", "product", "order")',
+                        'description' => 'Resource name (e.g. "post", "product", "order"). Singular is conventional. Tools resolve the singular and plural forms to the same resource, so "posts" regenerates an existing Post instead of adding a second resource.',
                     ],
                     'endpoint' => [
                         'type' => 'string',

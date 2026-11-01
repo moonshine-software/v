@@ -4,7 +4,7 @@
 
 ## Project Overview
 
-moonshine-api-admin (moonshine-v) is a free, MIT-licensed admin panel generator: an AI agent connects over MCP and builds a MoonShine admin UI for REST APIs or local Eloquent models. The repository is a runnable Laravel application; the API Admin module lives in `app/ApiAdmin/`.
+MoonShine V (`moonshine-v`) is a free, MIT-licensed admin panel generator: an AI agent connects over MCP and builds a MoonShine admin UI for REST APIs or local Eloquent models. The repository is a runnable Laravel application; the API Admin module lives in `app/ApiAdmin/`. Use "MoonShine V" in prose and `moonshine-v` in identifiers: MCP `serverInfo.name`, `moonshine-v://` resource URIs, the development Compose project, container and database names.
 
 ## Tech Stack
 
@@ -108,6 +108,7 @@ v/
 | Release Readiness | docs/release-readiness.md | Recorded release checks and limitations |
 | Security Policy | SECURITY.md | Private vulnerability reporting and supported code |
 | Contributing | CONTRIBUTING.md | Contributor setup, checks and pull request conventions |
+| Changelog | CHANGELOG.md | Notable changes per release |
 | Detailed MCP Tools | docs/api-admin/mcp-tools.md | Detailed schemas and JSON examples |
 | ServiceConfig | docs/api-admin/service-config.md | Service configuration reference |
 | Development Docker | docs/api-admin/docker-quickstart.md | Contributor container setup |
@@ -401,10 +402,10 @@ Copy `v/.mcp.json.example` to your project root as `.mcp.json` and keep one of t
 
 Besides tools, the server provides `resources/list` + `resources/read`. Four resources:
 
-- `moonshine-api-admin://llms` — serves the root `LLMS.txt` live (the full agent cheatsheet).
-- `moonshine-api-admin://fields` — JSON dump of `list_fields` (live catalog of field types).
-- `moonshine-api-admin://components` — JSON dump of `list_components` (layout primitives).
-- `moonshine-api-admin://field-methods` — JSON dump of `list_field_methods` (union of chain methods).
+- `moonshine-v://llms` — serves the root `LLMS.txt` live (the full agent cheatsheet).
+- `moonshine-v://fields` — JSON dump of `list_fields` (live catalog of field types).
+- `moonshine-v://components` — JSON dump of `list_components` (layout primitives).
+- `moonshine-v://field-methods` — JSON dump of `list_field_methods` (union of chain methods).
 
 An agent reads them once per session and does not parse the tool schema on every iteration. Add new resources in `McpServerCommand::resourceCatalog()` + `readResource()` and cover them in `McpProtocolTest::test_stdio_resources_*`.
 
@@ -414,7 +415,7 @@ An agent reads them once per session and does not parse the tool schema on every
 |---|---|---|
 | `register_service` | Registers a service: Config, Layout, panel in `moonshine.php`, entry in `api-admin.php`. Accepts `response_format: laravel\|django\|flat\|custom` (mapping preset) or an explicit `response_mapping`; `realtime` defines the webhook + browser refresh contract, the recommended broadcaster backend is Laravel Reverb. Omitted secrets are preserved in local/hosted storage; explicit empty strings clear them unless required by the selected auth/realtime mode. | no |
 | `initialize_local_service` | Registers a local MoonShine panel for Eloquent models (`kind: local`, `driver: eloquent`). Does not accept `base_url`, `api_key`, `response_mapping` or OAuth/session/admin_auth/realtime/health settings; those need `register_service`. | no |
-| `create_resource` | Generates a Resource + three pages for a service. Supports `has_many`/`has_one` with nested resources, `belongs_to_many`, `select` with `options`, `list_request` for POST list/search endpoints. | no |
+| `create_resource` | Generates a Resource + three pages for a service. Supports `has_many`/`has_one` with nested resources, `belongs_to_many`, `select` with `options`, `list_request` for POST list/search endpoints. An existing resource wins over the other form of its name: `posts` regenerates `Post` (`ServiceRegistry::resourceBaseName`). | no |
 | `create_model_resource` | Generates a native MoonShine `ModelResource` + Pages for a local Eloquent service. Accepts `model`, scalar/UI `fields`, per-page overrides, `rules`, `search`, `actions`, `icon`, `group`. Rejects REST services with `LOCAL_SERVICE_REQUIRED`, missing or non-Eloquent models with `MODEL_NOT_FOUND`. | no |
 | `configure_layout` | Changes panel logos and title. Menu items come from the panel's resources. | no |
 | `list_services` | Array of registered services with `base_url`, `panel`, `auth_type`, `resources_count`, file paths. Read-only. | no |

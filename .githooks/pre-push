@@ -8,4 +8,4 @@ if [ -x /usr/local/bin/php ] && [ "$(/usr/local/bin/php -r 'echo PHP_VERSION_ID;
     export PATH
 fi
 
-composer ai:validate --ansi
+XDEBUG_MODE=off composer ai:validate --ansi

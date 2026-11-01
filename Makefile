@@ -1,4 +1,4 @@
-# --- Makefile for moonshine-api-admin ---
+# --- Makefile for MoonShine V ---
 # Usage: make [target]
 
 SHELL := bash
@@ -9,16 +9,10 @@ MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
 # --- Project ---
-PROJECT  ?= moonshine-api-admin
 PHP      ?= php
 COMPOSER ?= composer
 ARTISAN  := $(PHP) artisan
 NPM      ?= npm
-
-# --- Git ---
-VERSION    ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-COMMIT     ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-BUILD_TIME := $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 
 # ============================================================================
 .DEFAULT_GOAL := help
@@ -53,22 +47,22 @@ routes: ## List application routes
 ##@ Testing
 
 .PHONY: test
-test: ## Run all tests (app + package)
+test: ## Run all tests
 	$(ARTISAN) config:clear --ansi
 	$(ARTISAN) test
 
-.PHONY: test-pkg
-test-pkg: ## Run package tests only (unit + integration)
+.PHONY: test-module
+test-module: ## Run API Admin module tests only (unit + integration)
 	$(ARTISAN) config:clear --ansi
 	./vendor/bin/phpunit tests/ApiAdmin/
 
-.PHONY: test-pkg-unit
-test-pkg-unit: ## Run package unit tests only
+.PHONY: test-module-unit
+test-module-unit: ## Run API Admin unit tests only
 	$(ARTISAN) config:clear --ansi
 	./vendor/bin/phpunit tests/ApiAdmin/Unit/
 
-.PHONY: test-pkg-integration
-test-pkg-integration: ## Run package integration tests only
+.PHONY: test-module-integration
+test-module-integration: ## Run API Admin integration tests only
 	$(ARTISAN) config:clear --ansi
 	./vendor/bin/phpunit tests/ApiAdmin/Integration/
 
@@ -89,8 +83,8 @@ test-filter: ## Run filtered tests (usage: make test-filter FILTER="ClassName::t
 lint: ## Run Laravel Pint (dry-run)
 	./vendor/bin/pint --test
 
-.PHONY: lint-pkg
-lint-pkg: ## Run Pint on package only (dry-run)
+.PHONY: lint-module
+lint-module: ## Run Pint on the API Admin module only (dry-run)
 	./vendor/bin/pint --test app/ApiAdmin/
 
 .PHONY: stan
@@ -101,8 +95,8 @@ stan: ## Run PHPStan (level max via larastan)
 lint-fix: ## Fix code style with Laravel Pint
 	./vendor/bin/pint
 
-.PHONY: lint-fix-pkg
-lint-fix-pkg: ## Fix code style in package only
+.PHONY: lint-fix-module
+lint-fix-module: ## Fix code style in the API Admin module only
 	./vendor/bin/pint app/ApiAdmin/
 
 .PHONY: rector
@@ -113,12 +107,12 @@ rector: ## Run Rector (dry-run)
 rector-fix: ## Apply Rector refactorings
 	./vendor/bin/rector process
 
-.PHONY: rector-pkg
-rector-pkg: ## Run Rector on package only (dry-run)
+.PHONY: rector-module
+rector-module: ## Run Rector on the API Admin module only (dry-run)
 	./vendor/bin/rector process app/ApiAdmin/ --dry-run
 
-.PHONY: rector-fix-pkg
-rector-fix-pkg: ## Apply Rector refactorings in package only
+.PHONY: rector-fix-module
+rector-fix-module: ## Apply Rector refactorings in the API Admin module only
 	./vendor/bin/rector process app/ApiAdmin/
 
 .PHONY: fmt
@@ -141,8 +135,8 @@ uninstall-hooks: ## Disable repo hooks
 .PHONY: check
 check: lint test ## Run all quality checks
 
-.PHONY: check-pkg
-check-pkg: lint-pkg test-pkg ## Run all package quality checks
+.PHONY: check-module
+check-module: lint-module test-module ## Run all API Admin quality checks
 
 ##@ Database
 
@@ -183,8 +177,6 @@ reload: ## Hot-reload: dump autoload + clear caches (after code generation)
 
 ##@ Api-Admin (app/ApiAdmin)
 
-.PHONY: pkg-reload
-pkg-reload: reload ## Alias: hot-reload after MCP code generation
 
 .PHONY: examples-up
 examples-up: ## Start example API servers (blog :9101, shop :9102)
@@ -217,15 +209,15 @@ services-regen: services-wipe examples-up ## Wipe + regenerate services from exa
 	@echo "Regeneration complete."
 
 .PHONY: docker-up
-docker-up: ## Start moonshine-api-admin Docker container
+docker-up: ## Start development Docker containers
 	docker compose --env-file docker/.env -f docker/docker-compose.yml up -d --build
 
 .PHONY: docker-down
-docker-down: ## Stop moonshine-api-admin Docker container
+docker-down: ## Stop development Docker containers
 	docker compose --env-file docker/.env -f docker/docker-compose.yml down
 
 .PHONY: docker-logs
-docker-logs: ## Tail moonshine-api-admin container logs
+docker-logs: ## Tail development container logs
 	docker compose --env-file docker/.env -f docker/docker-compose.yml logs -f
 
 ##@ Assets

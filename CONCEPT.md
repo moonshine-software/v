@@ -2,7 +2,7 @@
 
 ## In one paragraph
 
-**moonshine-v is a free, AI-driven admin panel for REST APIs, shipped as a Docker image.** A developer starts the container, connects its MCP server to Claude Code (or any MCP client) and builds a complete admin panel over their backend by voice or prompt. No editing of moonshine-v code. No knowledge of PHP, Laravel or MoonShine. No frontend developer on the team.
+**moonshine-v is a free, AI-driven admin panel for REST APIs that runs in Docker.** A developer starts it with one command, connects its MCP server to Claude Code (or any MCP client) and builds a complete admin panel over their backend by voice or prompt. No editing of moonshine-v code. No knowledge of PHP, Laravel or MoonShine. No frontend developer on the team.
 
 ## Who it is for and why
 
@@ -132,7 +132,7 @@ The developer **does not open** moonshine-v code. All interaction goes through M
 
 ## Delivery model
 
-- **Docker images** and an interactive installer (one command).
+- **An interactive installer** (one command) that builds the Docker images locally from the source. No prebuilt images are published.
 - **Free**, MIT license.
 - **MCP connection** — the installer configures Claude Code, Codex, Cursor, Gemini CLI and Windsurf; the `.mcp.json.example` template remains for manual setup.
 - **Data storage** — service data lives in their APIs. The admin itself stores users, generated state and hosted secrets in PostgreSQL and a persistent volume; upgrades are described in `docs/production.md`.

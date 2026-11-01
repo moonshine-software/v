@@ -10,4 +10,4 @@ if [ -x /usr/local/bin/php ] && [ "$(/usr/local/bin/php -r 'echo PHP_VERSION_ID;
 fi
 
 ./vendor/bin/pint --test
-composer stan --ansi
+XDEBUG_MODE=off composer stan --ansi

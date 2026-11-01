@@ -213,7 +213,7 @@ class McpServerCommand extends Command
                     'resources' => new stdClass,
                 ],
                 'serverInfo' => [
-                    'name' => 'moonshine-api-admin',
+                    'name' => 'moonshine-v',
                     'version' => '0.1.0',
                 ],
                 // Standard MCP `instructions` field (2024-11-05+). The
@@ -319,7 +319,7 @@ class McpServerCommand extends Command
 
         if (is_file(base_path('LLMS.txt'))) {
             $catalog[] = [
-                'uri' => 'moonshine-api-admin://llms',
+                'uri' => 'moonshine-v://llms',
                 'name' => 'LLMS.txt — agent cheatsheet',
                 'description' => 'Full agent guide: guardrails, typical flow, field types, auth schemes, response-mapping presets, layout presets, relations. Read once per session.',
                 'mimeType' => 'text/markdown',
@@ -330,19 +330,19 @@ class McpServerCommand extends Command
         // tool, served as a JSON resource so an agent can
         // `resources/read` once and cache the catalog for the session.
         $catalog[] = [
-            'uri' => 'moonshine-api-admin://fields',
+            'uri' => 'moonshine-v://fields',
             'name' => 'Field catalog',
             'description' => 'Flat list of every usable `fields[].type` (list_fields output).',
             'mimeType' => 'application/json',
         ];
         $catalog[] = [
-            'uri' => 'moonshine-api-admin://components',
+            'uri' => 'moonshine-v://components',
             'name' => 'Component catalog',
             'description' => 'Flat list of every layout.form.tree-addressable component (list_components output).',
             'mimeType' => 'application/json',
         ];
         $catalog[] = [
-            'uri' => 'moonshine-api-admin://field-methods',
+            'uri' => 'moonshine-v://field-methods',
             'name' => 'Field methods union',
             'description' => 'Union of chainable methods across every field type (list_field_methods output).',
             'mimeType' => 'application/json',
@@ -356,7 +356,7 @@ class McpServerCommand extends Command
      */
     private function readResource(string $uri): ?array
     {
-        if ($uri === 'moonshine-api-admin://llms') {
+        if ($uri === 'moonshine-v://llms') {
             $path = base_path('LLMS.txt');
             if (! is_file($path)) {
                 return null;
@@ -377,9 +377,9 @@ class McpServerCommand extends Command
         // execute() and JSON-encode its result. Keeps the resource view
         // in lockstep with the tool contract at zero ongoing cost.
         $introspection = [
-            'moonshine-api-admin://fields' => ListFieldsTool::class,
-            'moonshine-api-admin://components' => ListComponentsTool::class,
-            'moonshine-api-admin://field-methods' => ListFieldMethodsTool::class,
+            'moonshine-v://fields' => ListFieldsTool::class,
+            'moonshine-v://components' => ListComponentsTool::class,
+            'moonshine-v://field-methods' => ListFieldMethodsTool::class,
         ];
         if (isset($introspection[$uri])) {
             $toolClass = $introspection[$uri];
@@ -405,7 +405,7 @@ class McpServerCommand extends Command
     private function agentInstructions(): string
     {
         return <<<'TXT'
-moonshine-api-admin MCP — admin-panel generator for REST microservices and local Eloquent models.
+moonshine-v MCP — admin-panel generator for REST microservices and local Eloquent models.
 The agent talks to the generator through MCP. It MUST NOT touch the moonshine-v
 working copy directly (no shell commands, no filesystem reads, no package
 rebuilds) — every tool handles autoload + cache refresh internally.
@@ -475,6 +475,11 @@ Canonical REST microservice flow:
      infer mapping from a GET 405 error body.
      Use the output to finalize response_mapping before create_resource.
   3) create_resource(service, name, endpoint, fields[], list_request?, ...).
+     Prefer a singular name ("post"). Singular and plural forms address the
+     same resource in every tool; an existing resource wins, so "posts"
+     regenerates Post instead of adding a second resource.
+  4) Iterate with update_resource, or start over with remove_resource /
+     remove_service (both destructive, require confirm: true).
 
 Canonical local monolith flow:
   1) initialize_local_service(name, panel?, title?, auth_type?: local|none)
@@ -881,7 +886,7 @@ Introspection tools (read-only, call once per session and cache):
   • list_components — layout primitives (Box/Tabs/Grid/Column/…) +
     caller-generated custom components.
 
-  Live JSON snapshots also at moonshine-api-admin://fields, ://components,
+  Live JSON snapshots also at moonshine-v://fields, ://components,
   ://field-methods.
 
 Data-write tools (resource-item CRUD, honour mutations.* routing):

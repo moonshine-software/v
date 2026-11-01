@@ -5,7 +5,7 @@
 The calls below use readable pseudocode; send their arguments as JSON through your MCP client.
 
 
-The AI agent (Claude Code, another LLM) talks to moonshine-api-admin through the MCP server. There are two separate generation paths: REST microservices use `register_service` -> `probe_endpoint` -> `create_resource`; local Laravel apps use `initialize_local_service` -> `create_model_resource`.
+The AI agent (Claude Code, another LLM) talks to MoonShine V through the MCP server. There are two separate generation paths: REST microservices use `register_service` -> `probe_endpoint` -> `create_resource`; local Laravel apps use `initialize_local_service` -> `create_model_resource`.
 
 ## Agent and operator responsibilities
 
@@ -168,7 +168,7 @@ See [MCP Tools Reference](mcp-tools.md) for full schemas, error codes, and hints
 
 ### Local Eloquent flow
 
-Use this when moonshine-api-admin is managing models in the same Laravel app:
+Use this when MoonShine V is managing models in the same Laravel app:
 
 ```
 initialize_local_service(

@@ -280,9 +280,11 @@ final class ResourceGenerator
         $kind = is_string($params['kind'] ?? null) ? $params['kind'] : (str_contains($endpoint, '{') ? 'relation' : 'main');
 
         $serviceBaseName = Str::studly($serviceName);
-        $resourceBaseName = Str::studly($resourceName);
+        $registry = new ServiceRegistry;
+        // Regenerating "posts" must rewrite an existing Post, not add a second resource.
+        $resourceBaseName = $registry->resourceBaseName($serviceName, $resourceName);
         $className = $resourceBaseName.'Resource';
-        $resourcesPath = (new ServiceRegistry)->resourcesPath();
+        $resourcesPath = $registry->resourcesPath();
         $serviceNamespace = $this->baseNamespaceForPath($resourcesPath).'\\'.$serviceBaseName;
         $resourceNamespace = $serviceNamespace.'\\'.$resourceBaseName;
 

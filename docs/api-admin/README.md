@@ -1,6 +1,6 @@
-# moonshine-api-admin
+# API Admin module
 
-Free, MIT-licensed admin panel for microservices. A Laravel + MoonShine application where an AI agent (via MCP) generates and manages REST-based admin resources for your microservices.
+The module behind MoonShine V: a free, MIT-licensed admin panel for microservices. A Laravel + MoonShine application where an AI agent (via MCP) generates and manages REST-based admin resources for your microservices.
 
 ## Key Features
 
@@ -11,14 +11,14 @@ Free, MIT-licensed admin panel for microservices. A Laravel + MoonShine applicat
 - **MCP code generation** -- AI agent generates PHP resource files, configs, and layouts via MCP tools.
 - **Hosted mode** -- tenant-scoped admin routes and HTTPS Streamable HTTP MCP with tenant-bound developer tokens.
 - **Built-in instructor** -- `/api-admin/instructor` probes a new API and proposes the first service/resource before generation.
-- **Two-layer validation** -- Laravel rules (client-side) + API 422 error mapping (server-side).
+- **Two-layer validation** -- Laravel rules in the admin panel + API 422 error mapping from the upstream.
 - **Configurable response mapping** -- map any API pagination format (Laravel, Django REST, custom).
 - **Hot-reload** -- after MCP generates files, autoload and caches refresh automatically.
 
 ## Architecture
 
 ```
-Your Microservices          moonshine-api-admin           Browser
+Your Microservices             MoonShine V               Browser
 +-------------+           +-----------------+          +--------+
 | Blog API    |<-- HTTP --| AbstractRest    |<-- HTTP--| Admin  |
 | Shop API    |           | Resource        |          | Panel  |
@@ -121,7 +121,7 @@ class PostResource extends MultiPanelRestResource
 |-----|-------------|
 | [MCP Tools Reference](mcp-tools.md) | register_service, create_resource, instructor_status, data tools |
 | [ServiceConfig Format](service-config.md) | Response mapping, auth types, configuration |
-| [Docker Quickstart](docker-quickstart.md) | Run with Docker in 5 minutes |
+| [Development Docker](docker-quickstart.md) | Contributor container setup |
 
 ## REST Relation Fields
 
@@ -135,7 +135,7 @@ class PostResource extends MultiPanelRestResource
 ## Testing
 
 ```bash
-php vendor/bin/phpunit tests/ApiAdmin/
+XDEBUG_MODE=off php vendor/bin/phpunit tests/ApiAdmin/
 ```
 
 ## License

@@ -55,7 +55,7 @@ artisan path with the absolute path to your checkout:
 ```json
 {
   "mcpServers": {
-    "api-admin": {
+    "moonshine-v": {
       "command": "php",
       "args": ["/absolute/path/to/v/artisan", "api-admin:mcp-server"]
     }
@@ -68,7 +68,7 @@ uses its native `codex mcp add` command; the [installer](installation.md) handle
 client-specific configuration and Docker execution automatically.
 
 The root `.mcp.json.example` includes a development Docker configuration using
-the `moonshine-api-admin-fpm` container and a host configuration using an absolute
+the `moonshine-v-fpm` container and a host configuration using an absolute
 artisan path. Keep only the applicable server. For an installer-managed stack,
 use its generated `.moonshine-install/mcp.json`.
 
@@ -133,15 +133,15 @@ cache, sessions, queues and broadcasting before serving tenants.
 ```sh
 XDEBUG_MODE=off composer ai:validate
 npm run test:installer
+npm run test:e2e
 npm run build
 ```
 
-Disable Xdebug for validation in this environment to avoid the PHP 8.5 CLI
-allocator crash described in the project's agent rules. `make check` covers
-linting and tests; `composer ai:validate` is the full PHP release gate.
+Disable Xdebug for validation: PHP 8.5 CLI with Xdebug can abort the test suite
+with `zend_mm_heap corrupted`. `make check` covers linting and tests;
+`composer ai:validate` is the full PHP release gate.
 
 ## Make Targets
-
 
 ```bash
 make help              # Show all targets
@@ -152,25 +152,24 @@ make setup             # Full project setup
 make dev               # Start dev server (Laravel + Vite + queue + logs)
 
 # Testing
-make test              # Run all tests (app + package)
-make test-pkg          # Run package tests only
-make test-pkg-unit     # Run package unit tests
-make test-pkg-integration  # Run package integration tests
+make test              # Run all tests
+make test-module       # Run API Admin module tests only
+make test-module-unit  # Run API Admin unit tests
+make test-module-integration  # Run API Admin integration tests
 
 # Code Quality
 make lint              # Pint dry-run (all)
-make lint-pkg          # Pint dry-run (package only)
+make lint-module       # Pint dry-run (API Admin module only)
 make lint-fix          # Auto-fix style (all)
 make check             # Lint + test (all)
-make check-pkg         # Lint + test (package only)
+make check-module      # Lint + test (API Admin module only)
 
-# Package
+# API Admin
 make reload            # Hot-reload after MCP code generation
-make docker-up         # Start Docker container
-make docker-down       # Stop Docker container
+make docker-up         # Start Docker containers
+make docker-down       # Stop Docker containers
 make docker-logs       # Tail container logs
 ```
-
 
 The Docker Make targets operate on the development stack. For the interactive
 installer's separate stack, use the commands in [Installation](installation.md).

@@ -1,0 +1,27 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm:
+        patterns: ['*']
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: weekly
+    # MoonShine is pinned to a reviewed development commit and updated by hand.
+    ignore:
+      - dependency-name: moonshine/moonshine
+    groups:
+      composer:
+        patterns: ['*']
+  - package-ecosystem: docker
+    directory: /docker
+    schedule:
+      interval: weekly

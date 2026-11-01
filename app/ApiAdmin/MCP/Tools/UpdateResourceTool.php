@@ -9,7 +9,6 @@ use App\ApiAdmin\MCP\Generator\ResourceValidator;
 use App\ApiAdmin\MCP\ServiceRegistry;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -129,9 +128,7 @@ final class UpdateResourceTool implements ToolContract
             ];
         }
 
-        $registry = new ServiceRegistry;
-        $resources = $registry->listResources($service);
-        $match = array_find($resources, fn ($r): bool => $r['name'] === Str::snake($name) || $r['base_name'] === Str::studly(Str::singular($name)));
+        $match = (new ServiceRegistry)->findResource($service, $name);
 
         if ($match === null) {
             return [

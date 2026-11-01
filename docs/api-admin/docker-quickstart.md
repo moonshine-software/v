@@ -38,9 +38,9 @@ HTTPS_PORT=8443
 DB_CONNECTION=pgsql
 DB_HOST=postgres
 DB_PORT=5432
-DB_DATABASE=moonshine_api_admin
-DB_USERNAME=moonshine_api_admin
-DB_PASSWORD=moonshine_api_admin
+DB_DATABASE=moonshine_v
+DB_USERNAME=moonshine_v
+DB_PASSWORD=moonshine_v
 
 CACHE_STORE=redis
 SESSION_DRIVER=redis
@@ -77,7 +77,7 @@ The compose stack starts four runtime services:
 | `redis` | Cache, sessions, queue backend | `127.0.0.1:6379` |
 
 Database migrations run automatically in the one-shot
-`moonshine-api-admin-migrate` service before the web container starts.
+`moonshine-v-migrate` service before the web container starts.
 
 ## TLS Certificates
 
@@ -122,8 +122,8 @@ API_ADMIN_TENANT_ROUTE_PREFIX=t/{tenant}
 DB_CONNECTION=pgsql
 DB_HOST=your-managed-postgres-host
 DB_PORT=5432
-DB_DATABASE=moonshine_api_admin
-DB_USERNAME=moonshine_api_admin
+DB_DATABASE=moonshine_v
+DB_USERNAME=moonshine_v
 DB_PASSWORD=change-me
 
 CACHE_STORE=redis
@@ -138,7 +138,7 @@ tenant-bound token:
 ```json
 {
   "mcpServers": {
-    "api-admin": {
+    "moonshine-v": {
       "url": "https://admin.example.com/t/acme/api-admin/mcp",
       "headers": {
         "Authorization": "Bearer ${API_ADMIN_MCP_TOKEN}"
@@ -165,7 +165,7 @@ for troubleshooting:
 php artisan api-admin:reload
 
 # Or from outside
-docker exec moonshine-api-admin-fpm php artisan api-admin:reload
+docker exec moonshine-v-fpm php artisan api-admin:reload
 ```
 
 ## Ports
@@ -175,7 +175,11 @@ docker exec moonshine-api-admin-fpm php artisan api-admin:reload
 | Admin Panel | 8080 (configurable via `APP_PORT`) |
 | HTTPS | 8443 by default, 443 for production ACME (configurable via `HTTPS_PORT`) |
 | PostgreSQL | 5432 on localhost only (configurable via `POSTGRES_PORT`) |
-| Redis | 6379 on localhost only (configurable via `REDIS_PORT`) |
+| Redis | 6379 on localhost only (configurable via `REDIS_HOST_PORT`) |
+
+`POSTGRES_PORT` and `REDIS_HOST_PORT` change only the host side. `DB_PORT` and
+`REDIS_PORT` are what the application uses inside the Docker network; keep them
+at the defaults.
 
 ## Volumes
 

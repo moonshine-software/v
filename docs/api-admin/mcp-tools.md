@@ -371,7 +371,11 @@ and registry entries. Destructive.
 ### remove_resource
 
 Input: `{service, name, confirm: true}`. Removes one resource directory with its
-pages. Destructive.
+pages. Destructive. Removing a name that matches nothing succeeds with an empty
+`removed_paths`.
+
+Singular and plural forms of a resource name address the same resource in every
+tool. An existing resource wins, so `posts` reaches an existing `Post`.
 
 ## Introspection (read-only)
 
@@ -443,8 +447,26 @@ session state, webhook secrets, and tenant-sensitive payloads must not appear
 in health logs or responses.
 
 The live JSON snapshots are also published at
-`moonshine-api-admin://fields`, `://components`, `://field-methods` via
+`moonshine-v://fields`, `://components`, `://field-methods` via
 `resources/read`.
+
+## Resource-item reads (read-only)
+
+Both tools use the same `AbstractRestResource` path as the admin UI. See
+[fetch_resource_items](../mcp-tools.md#fetch_resource_items) and
+[fetch_resource_item](../mcp-tools.md#fetch_resource_item) for response shapes.
+
+### fetch_resource_items
+
+Input: `{service, resource, filter?, search?, sort?, page?, per_page?, cursor?,
+parent_context?}`. Returns `{items, pagination}`. Relation resources without
+`parent_context` return `RELATION_RESOURCE_REQUIRES_PARENT`.
+
+### fetch_resource_item
+
+Input: `{service, resource, id, parent_context?}`. Honours the per-resource
+`detail_strategy` override and returns `{item}` with the primary key at the top
+level. An upstream 404 surfaces as `NOT_FOUND`.
 
 ## Resource-item CRUD (data-write)
 

@@ -22,21 +22,6 @@ containers. The first image build can take several minutes.
 
 ## Run the Wizard
 
-The repository is currently **private**. Until it is published, the anonymous
-archive URL below returns `404`. Collaborators with access can clone it through
-their authenticated Git setup and follow [Source Installation](getting-started.md#source-installation).
-For example, with GitHub CLI authenticated to an account that has access:
-
-```sh
-gh repo clone moonshine-software/v
-cd v
-```
-
-Continue with `composer install` and the remaining source-installation steps.
-Those steps require the PHP and Composer prerequisites listed in that guide.
-
-After the repository becomes public, run the wizard with:
-
 ```sh
 npx --yes --package=https://github.com/moonshine-software/v/archive/refs/heads/main.tar.gz moonshine-v-install
 ```
@@ -44,8 +29,8 @@ npx --yes --package=https://github.com/moonshine-software/v/archive/refs/heads/m
 If Windows PowerShell blocks `npx.ps1` under its execution policy, use `npx.cmd`
 with the same arguments. No execution-policy change is needed.
 
-For the public release, the installer and source checkout use public HTTPS;
-no GitHub account, SSH key or published npm package is required. Check access with
+The installer and source checkout use public HTTPS; no GitHub account, SSH key
+or published npm package is required. Check access with
 `git ls-remote https://github.com/moonshine-software/v.git HEAD` if npm reports a
 Git error. Network or repository access failures stop installation without
 switching to SSH. Run it directly in a terminal so the wizard and administrator

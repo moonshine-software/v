@@ -96,7 +96,7 @@ final class HostedMcpControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonPath('result.protocolVersion', '2025-06-18');
-        $response->assertJsonPath('result.serverInfo.name', 'moonshine-api-admin-hosted');
+        $response->assertJsonPath('result.serverInfo.name', 'moonshine-v-hosted');
     }
 
     public function test_hosted_mcp_rejects_route_tenant_mismatch(): void

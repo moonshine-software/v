@@ -1,6 +1,6 @@
 # Example APIs For MCP E2E
 
-Four test APIs for exercising `moonshine-api-admin`:
+Four test APIs for exercising MoonShine V:
 
 - `examples/blog-api` (`http://127.0.0.1:9101`) — relation types.
 - `examples/shop-api` (`http://127.0.0.1:9102`) — Django-style envelope.

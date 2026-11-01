@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a vulnerability
+    url: https://github.com/moonshine-software/v/security/advisories/new
+    about: Do not open a public issue for security problems.
+  - name: MoonShine documentation
+    url: https://getmoonshine.app/docs
+    about: Questions about MoonShine itself.

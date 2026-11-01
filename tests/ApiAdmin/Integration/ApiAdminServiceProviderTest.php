@@ -63,8 +63,8 @@ class ApiAdminServiceProviderTest extends TestCase
         // Point the scan at a tmp dir with one fake generated resource.
         // Using the real app/MoonShine/ApiAdmin/Resources would couple
         // this test to the host project's current state.
-        $this->resourceDir = sys_get_temp_dir().'/moonshine-api-admin-provider-test-'.uniqid();
-        $this->localResourceDir = sys_get_temp_dir().'/moonshine-api-admin-local-provider-test-'.uniqid();
+        $this->resourceDir = sys_get_temp_dir().'/moonshine-v-provider-test-'.uniqid();
+        $this->localResourceDir = sys_get_temp_dir().'/moonshine-v-local-provider-test-'.uniqid();
         $app['config']->set('api-admin.resources_path', $this->resourceDir);
         $app['config']->set('api-admin.local_resources_path', $this->localResourceDir);
         $app['config']->set('api-admin.local_resources_namespace', 'App\\MoonShine\\Resources');

@@ -6,12 +6,12 @@ Last verified: 2026-11-01. This records what was checked and what remains out of
 
 ## Status
 
-The source passed the checks below. The repository is still private and no release has been tagged, so the anonymous one-command installation in the README cannot work yet. It must be verified separately after publication.
+The source passed the checks below. No release has been tagged yet.
 
-Before a public release:
+Before tagging a release:
 
-- Recheck the pinned MoonShine commit if upstream changes before publication.
-- Verify the anonymous `npx` installation and private vulnerability reporting once the repository is public.
+- Recheck the pinned MoonShine commit if upstream has changed.
+- Verify the anonymous `npx` installation and private vulnerability reporting from a clean environment.
 
 ## Core and compatibility
 
@@ -24,11 +24,12 @@ Before a public release:
 | Check | Result |
 |---|---|
 | `XDEBUG_MODE=off composer ai:validate` | Exit 0: Pint, Rector, production audit, PHPStan level max, PHPUnit |
-| PHPUnit | **882 passed, 4467 assertions**, including real API compatibility and HTTP authorization regressions |
+| PHPUnit | **891 passed, 4496 assertions**, including real API compatibility and HTTP authorization regressions |
 | Chrome E2E (`npm run test:e2e`) | **43 passed**, including real Django previous/next navigation without invented page metadata |
 | Installer unit tests (`npm run test:installer`) | **16 passed** |
 | Fresh Docker installation (`npm run test:installer:docker`) | Passed: secret exclusion, administrator login, MCP discovery, resume and restart persistence |
 | Production smoke (`docker/smoke.sh`) | Passed: PostgreSQL, Redis, queue, generated state, container recreation, backup/restore, backend outage |
+| Development stack (`docker/docker-compose.yml`) | Passed: all services healthy, custom host ports, generation and data tools through `docker exec` MCP |
 | `composer audit --locked`, `npm audit` | 0 advisories, including development dependencies |
 | `npm run build` | Successful |
 

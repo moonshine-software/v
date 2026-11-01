@@ -5,7 +5,7 @@
     "moonshine-v": {
       "_comment_docker": "For the development stack in docker/docker-compose.yml. docker exec takes the container name, not the Compose service name.",
       "command": "docker",
-      "args": ["exec", "-i", "moonshine-api-admin-fpm", "php", "artisan", "api-admin:mcp-server"]
+      "args": ["exec", "-i", "moonshine-v-fpm", "php", "artisan", "api-admin:mcp-server"]
     },
 
     "moonshine-v-local": {

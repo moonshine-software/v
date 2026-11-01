@@ -299,7 +299,7 @@ export async function main() {
     }
     if (action) throw new Error(`Unknown option: ${action}. Use --help.`);
     if (!process.stdin.isTTY) throw new Error('Run this installer in an interactive terminal (do not pipe its standard input).');
-    console.log('\nMoonShine API Admin — local installation\n');
+    console.log('\nMoonShine V — local installation\n');
     const tools = checkPrerequisites();
     const prompt = createInterface({ input: process.stdin, output: process.stdout });
     const confirm = async label => /^(y|yes)$/i.test((await prompt.question(`${label} [y/N]: `)).trim());

@@ -1,7 +1,7 @@
-# Project: moonshine-api-admin
+# Project: MoonShine V
 
 ## Overview
-A free, MIT-licensed Laravel application that provides an AI-driven admin panel for microservices. Ships as Docker images with Laravel + MoonShine 5, where an AI agent (Claude) initializes and manages the admin panel via MCP server. Developers never touch the admin code — everything is controlled by AI through code generation.
+A free, MIT-licensed Laravel application that provides an AI-driven admin panel for microservices. Runs in Docker with Laravel + MoonShine 5, where an AI agent (Claude) initializes and manages the admin panel via MCP server. Developers never touch the admin code — everything is controlled by AI through code generation.
 
 ## Core Features
 - REST resources that work over HTTP — supports any microservice regardless of stack
@@ -11,7 +11,7 @@ A free, MIT-licensed Laravel application that provides an AI-driven admin panel 
 - Multi-panel architecture: one panel per microservice, isolated routing and config
 - Two-layer validation: Laravel rules + API 422 error mapping to form fields
 - MCP server with tools for services, resources, field deltas, data, analytics, introspection and extensions (see `AGENTS.md`)
-- Hosted MCP transport over HTTP/SSE with tenant-bound developer bearer tokens
+- Hosted MCP transport over stateless Streamable HTTP with tenant-bound developer bearer tokens
 - Built-in Instructor Agent: browser onboarding that probes an API, proposes `register_service` + initial `create_resource`, and waits for human confirmation before generation
 - Hot-reload after code generation (composer dump-autoload + cache clear)
 - Realtime upstream updates via service webhooks, Laravel broadcasting/Reverb, and MoonShine browser refresh metadata

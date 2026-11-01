@@ -8,15 +8,13 @@ Free and MIT-licensed. Built on **PHP 8.5, Laravel 13 and MoonShine 5**. MoonShi
 
 ## Quick Start
 
-The repository is currently private. Collaborators with access can use an authenticated checkout and follow [Source Installation](docs/getting-started.md#source-installation). Anonymous installation will be available after the repository becomes public.
-
-For the public release, install **Node.js 22.12+** (24 recommended), **Git**, and start **Docker** (Engine 26+, Compose 2.38.2+). Then run this same command in macOS/Linux terminals or Windows PowerShell:
+Install **Node.js 22.12+** (24 recommended), **Git**, and start **Docker** (Engine 26+, Compose 2.38.2+). Then run this same command in macOS/Linux terminals or Windows PowerShell:
 
 ```sh
 npx --yes --package=https://github.com/moonshine-software/v/archive/refs/heads/main.tar.gz moonshine-v-install
 ```
 
-After publication, the installer downloads the public source over HTTPS; no GitHub account or SSH key is required. See [installation details](docs/installation.md).
+The installer downloads the source over HTTPS; no GitHub account or SSH key is required. See [installation details](docs/installation.md).
 
 The interactive installer:
 
@@ -96,4 +94,4 @@ Additional references: [detailed MCP schemas](docs/api-admin/mcp-tools.md), [Ser
 
 ## License
 
-[MIT](LICENSE.md). See [Contributing](CONTRIBUTING.md) and [Security](SECURITY.md).
+[MIT](LICENSE.md). See [Contributing](CONTRIBUTING.md), [Security](SECURITY.md) and the [Changelog](CHANGELOG.md).

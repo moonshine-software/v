@@ -1,6 +1,6 @@
 {
     "$schema": "https://www.schemastore.org/package.json",
-    "name": "moonshine-api-admin",
+    "name": "moonshine-v",
     "version": "0.1.0-dev",
     "private": true,
     "type": "module",

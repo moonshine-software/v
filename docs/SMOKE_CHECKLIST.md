@@ -120,7 +120,7 @@ For hosted mode, run a separate minimal cycle with two tenants.
 - [ ] `API_ADMIN_HOSTED_MODE=hosted`, `API_ADMIN_HOSTED_MCP_ENABLED=true`, the route prefix stays `t/{tenant}` or another one is documented.
 - [ ] An active tenant `acme` and a tenant-bound MCP token with the `tools:read` scope exist for the initial check.
 - [ ] The developer project's `.mcp.json` points only at a hosted URL like `https://<host>/t/acme/api-admin/mcp` plus the bearer token. No local moonshine-v clone is needed.
-- [ ] `initialize` over hosted MCP returns `serverInfo.name: "moonshine-api-admin-hosted"`.
+- [ ] `initialize` over hosted MCP returns `serverInfo.name: "moonshine-v-hosted"`.
 - [ ] `list_services` returns only the services of tenant `acme`.
 - [ ] `health_check({})` returns only the services of tenant `acme`, `diagnostics.mode: "hosted"`, and `diagnostics.warnings` is empty or contains clear deployment warnings.
 - [ ] Warnings about `CACHE_STORE=array|file`, `SESSION_DRIVER=array|file|cookie`, `QUEUE_CONNECTION=sync`, `BROADCAST_CONNECTION=log|null` are resolved before production.

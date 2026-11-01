@@ -8,6 +8,10 @@ LOGS_DIR="$ROOT_DIR/examples/.logs"
 mkdir -p "$PIDS_DIR"
 mkdir -p "$LOGS_DIR"
 
+port_in_use() {
+  (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null
+}
+
 start_api() {
   local name="$1"
   local port="$2"
@@ -23,6 +27,11 @@ start_api() {
       return
     fi
     rm -f "$pid_file"
+  fi
+
+  if port_in_use "$port"; then
+    echo "$name not started: port $port is already in use" >&2
+    return
   fi
 
   (
