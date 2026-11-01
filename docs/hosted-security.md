@@ -28,6 +28,10 @@ Delegated/OAuth login links users by **tenant ID + service + upstream subject**.
 
 Existing upstream identity rows are migrated to the `local` tenant. Old hosted identities cannot safely be assigned from email or service name alone; authenticate again within the intended tenant and grant the resulting user membership explicitly. Hosted upstream guard session names also change, requiring a fresh login.
 
+Instructor drafts are tenant-scoped in both the browser and MCP. Old unscoped
+hosted drafts are intentionally ignored; restart unfinished onboarding after an
+upgrade. Local drafts keep their existing cache keys.
+
 Service credentials are encrypted in `api_admin_tenant_secrets` using the application encryption key. The database is the source of truth. New writes discard old cache copies; a missing database value can migrate a valid legacy encrypted cache value once. Corrupt ciphertext fails closed instead of silently dropping upstream authentication.
 
 For an upgrade, keep the old application cache available until these commands finish:

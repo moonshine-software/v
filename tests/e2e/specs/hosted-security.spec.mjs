@@ -1,4 +1,4 @@
-import { HOSTED_URL } from '../environment.mjs';
+import { API_PORTS, HOSTED_URL } from '../environment.mjs';
 import { expect, signIn, test } from '../support.mjs';
 
 const MEMBER = { username: 'hosted-member@example.test', password: 'hosted-member-password' };
@@ -42,6 +42,25 @@ test('a tenant member cannot read or mutate platform users and roles', async ({ 
     // Authentication succeeds with the original password; membership still denies the owner this tenant.
     await expect(page).toHaveURL(HUB);
     await expect(page.locator('body')).toContainText('403');
+});
+
+test('one browser user keeps separate instructor drafts in two tenants', async ({ page }) => {
+    await signInAsMember(page);
+    for (const tenant of ['acme', 'beta']) {
+        await page.goto(`${HOSTED_URL}/t/${tenant}/admin/page/instructor-page`);
+        await expect(page.getByRole('button', { name: 'Generate service and resource' })).toHaveCount(0);
+        await page.locator('#base_url').fill(`http://127.0.0.1:${API_PORTS.blog}/v1`);
+        await page.locator('#service_name').fill(`draft_${tenant}`);
+        await page.locator('#resource_name').fill('post');
+        await page.locator('#endpoint_paths').fill('/posts');
+        await page.getByRole('button', { name: 'Probe API' }).click();
+        await expect(page.locator('main pre')).toContainText(`draft_${tenant}`);
+    }
+    await page.getByRole('button', { name: 'Reset instructor state' }).click();
+    await expect(page.getByRole('button', { name: 'Generate service and resource' })).toHaveCount(0);
+    await page.goto(`${HOSTED_URL}/t/acme/admin/page/instructor-page`);
+    await expect(page.locator('main pre')).toContainText('draft_acme');
+    await expect(page.locator('main pre')).not.toContainText('draft_beta');
 });
 
 test('hosted OAuth completes PKCE login, restores the session and renders the configured layout', async ({ page }) => {

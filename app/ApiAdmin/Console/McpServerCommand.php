@@ -539,6 +539,8 @@ Known gotchas (repeat offenders — scan before debugging):
     tweak response_mapping / filter_param_name without restating the
     token — the stored secret survives. Explicit empty string clears
     (for auth_type="none").
+    The same preserve/clear contract applies to other secrets in local and
+    hosted modes; required credentials still undergo validation.
   • Embedded Laravel relations (GET /x/1 → {resource:{data:{...,
     client:{id,name}}}}) need detail_data_key: "resource.data" +
     fields[].column = embed key name (client, not client_id).
@@ -858,6 +860,7 @@ Instructor tool (read-only onboarding status):
     sanitized proposal. It does NOT register services or generate
     resources; use the existing register_service/create_resource tools
     or the browser confirmation flow for mutations. Secrets are redacted.
+    Hosted sessions are isolated to the active tenant, even with an explicit ID.
 
 Introspection tools (read-only, call once per session and cache):
 

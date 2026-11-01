@@ -557,6 +557,9 @@ a sanitized proposal summary. This tool is read-only: it does not call
 `register_service`, does not call `create_resource`, and never returns
 raw secrets.
 
+Hosted lookup is limited to the active tenant, including explicit session IDs.
+Sessions from another tenant or old unscoped cache entries are not returned.
+
 Example:
 
 ```json

@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace App\ApiAdmin\Instructor;
 
+use App\ApiAdmin\Tenancy\TenantContext;
+use App\ApiAdmin\Tenancy\TenantKeyBuilder;
+use App\ApiAdmin\Tenancy\TenantResolver;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use RuntimeException;
 use Throwable;
 
 final readonly class InstructorSessionRepository
@@ -94,7 +98,17 @@ final readonly class InstructorSessionRepository
 
     private function key(string $sessionId): string
     {
-        return 'api-admin:instructor:'.$sessionId;
+        if (config('api-admin.hosted.mode', 'local') !== 'hosted') {
+            return 'api-admin:instructor:'.$sessionId;
+        }
+
+        $resolver = app()->get(TenantResolver::class);
+        $tenant = $resolver->resolve();
+        if (! $tenant instanceof TenantContext || $tenant->isLocal) {
+            throw new RuntimeException('Missing tenant context for instructor session.');
+        }
+
+        return TenantKeyBuilder::cacheKey($tenant->id, 'instructor', hash('sha256', $sessionId));
     }
 
     private function store(): CacheRepository

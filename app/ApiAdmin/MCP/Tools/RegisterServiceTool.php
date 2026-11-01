@@ -12,6 +12,7 @@ use App\ApiAdmin\Tenancy\TenantContext;
 use App\ApiAdmin\Tenancy\TenantResolver;
 use App\ApiAdmin\Tenancy\TenantRoutes;
 use App\ApiAdmin\Tenancy\TenantSecretStore;
+use Dotenv\Dotenv;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -94,7 +95,7 @@ final class RegisterServiceTool implements ToolContract
     {
         return [
             'name' => 'register_service',
-            'description' => 'Generation changes are serialized and rolled back on failure. Register a new microservice in the admin panel. Creates ServiceConfig, Layout, and panel configuration.',
+            'description' => 'Generation changes are serialized and rolled back on failure. Register a new microservice in the admin panel. Creates ServiceConfig, Layout, and panel configuration. Omitted secrets are preserved; explicit empty strings clear secrets unless required by the selected authentication or realtime mode.',
             'inputSchema' => [
                 'type' => 'object',
                 'properties' => [
@@ -421,7 +422,7 @@ final class RegisterServiceTool implements ToolContract
         $apiKeyProvided = array_key_exists('api_key', $params);
         $apiKey = $apiKeyProvided
             ? $params['api_key']
-            : $this->readExistingApiKey($name);
+            : $this->readExistingSecret($name, '_API_KEY', 'api_key');
         $panel = $params['panel'] ?? $name.'-admin';
         $title = $params['title'] ?? Str::title($name).' Admin';
         $authType = $params['auth_type'] ?? 'bearer';
@@ -478,18 +479,15 @@ final class RegisterServiceTool implements ToolContract
         // Re-registering without passing oauth_client_secret preserves the stored value (same pattern as api_key).
         $oauthClientSecret = array_key_exists('oauth_client_secret', $params)
             ? $params['oauth_client_secret']
-            : $this->readExistingServiceField($name, 'oauth_client_secret');
+            : $this->readExistingSecret($name, '_OAUTH_CLIENT_SECRET', 'oauth_client_secret');
         $oauthScope = is_string($params['oauth_scope'] ?? null) ? $params['oauth_scope'] : '';
 
         // OAuth password / refresh-token grant inputs.
         $oauthUsername = $params['oauth_username'] ?? '';
         $oauthPassword = array_key_exists('oauth_password', $params)
             ? $params['oauth_password']
-            : $this->readExistingEnvSecret($name, '_OAUTH_PASSWORD', 'oauth_password');
-        $tenant = $this->currentTenantContext();
-        $previousOAuthRefreshToken = $tenant->isLocal
-            ? $this->readExistingEnvSecret($name, '_OAUTH_REFRESH_TOKEN', 'oauth_refresh_token')
-            : new TenantSecretStore()->get($tenant->id, $name, 'oauth_refresh_token');
+            : $this->readExistingSecret($name, '_OAUTH_PASSWORD', 'oauth_password');
+        $previousOAuthRefreshToken = $this->readExistingSecret($name, '_OAUTH_REFRESH_TOKEN', 'oauth_refresh_token');
         $previousOAuthStore = is_array(config("api-admin.services.{$name}"))
             ? ApiAdminServiceProvider::resolveService($name)->oauthTokenStore()
             : null;
@@ -505,7 +503,7 @@ final class RegisterServiceTool implements ToolContract
         $sessionUsername = $params['session_username'] ?? '';
         $sessionPassword = array_key_exists('session_password', $params)
             ? $params['session_password']
-            : $this->readExistingEnvSecret($name, '_SESSION_PASSWORD', 'session_password');
+            : $this->readExistingSecret($name, '_SESSION_PASSWORD', 'session_password');
         $csrfTokenSource = $params['csrf_token_source'] ?? 'cookie';
         $csrfTokenKey = $params['csrf_token_key'] ?? 'XSRF-TOKEN';
         $csrfHeaderName = $params['csrf_header_name'] ?? 'X-XSRF-TOKEN';
@@ -637,7 +635,7 @@ final class RegisterServiceTool implements ToolContract
             'oauth_refresh_token' => $oauthRefreshToken,
             'session_password' => $adminLogin ? null : $sessionPassword,
             'webhook_secret' => $realtime['webhook_secret'],
-        ], static fn (?string $value): bool => $value !== null && $value !== '');
+        ], static fn (?string $value): bool => $value !== null);
 
         if ($tenant->isLocal) {
             $this->syncDotEnv(
@@ -653,9 +651,6 @@ final class RegisterServiceTool implements ToolContract
                 ], static fn (?string $value): bool => $value !== null),
             );
         } else {
-            if (is_array($params['realtime'] ?? null) && array_key_exists('webhook_secret', $params['realtime'])) {
-                $secretValues['webhook_secret'] = $realtime['webhook_secret'];
-            }
             (new TenantSecretStore)->putMany($tenant->id, $name, $secretValues);
         }
 
@@ -832,12 +827,9 @@ final class RegisterServiceTool implements ToolContract
             ? trim($value($key, $default))
             : $default;
 
-        $tenant = $this->currentTenantContext();
         $webhookSecret = array_key_exists('webhook_secret', $provided)
             ? (is_string($provided['webhook_secret']) ? $provided['webhook_secret'] : '')
-            : ($tenant->isLocal
-                ? $this->readExistingEnvSecret($name, '_WEBHOOK_SECRET', 'realtime.webhook_secret')
-                : app(TenantSecretStore::class)->get($tenant->id, $name, 'webhook_secret'));
+            : $this->readExistingSecret($name, '_WEBHOOK_SECRET', 'realtime.webhook_secret');
 
         $strategy = $string('refresh_strategy', 'auto');
         if (! in_array($strategy, ['auto', 'notice', 'disabled'], true)) {
@@ -1283,30 +1275,23 @@ final class RegisterServiceTool implements ToolContract
     }
 
     /**
-     * Read a previously-stored sensitive value, preferring .env over the
-     * config file (config holds an empty stub for sensitive keys; env is
-     * the runtime source of truth). Returns '' if neither is set.
+     * Preserve omitted secrets from tenant storage or local dotenv/config.
      */
-    private function readExistingEnvSecret(string $name, string $envSuffix, string $configKey): string
+    private function readExistingSecret(string $name, string $envSuffix, string $configKey): string
     {
+        $tenant = $this->currentTenantContext();
+        if (! $tenant->isLocal) {
+            return new TenantSecretStore()->get($tenant->id, $name, Str::afterLast($configKey, '.'));
+        }
+
         $envPrefix = Str::upper(Str::snake(str_replace('-', '_', $name)));
         $envKey = $envPrefix.$envSuffix;
 
         $envPath = base_path('.env');
         if (File::exists($envPath)) {
-            $content = File::get($envPath);
-            if (preg_match('/^'.preg_quote($envKey, '/').'=(.*)$/m', $content, $m) === 1) {
-                $value = trim($m[1]);
-                if (strlen($value) >= 2) {
-                    $first = $value[0];
-                    $last = $value[strlen($value) - 1];
-                    if (($first === '"' && $last === '"') || ($first === "'" && $last === "'")) {
-                        $value = substr($value, 1, -1);
-                    }
-                }
-                if ($value !== '') {
-                    return $value;
-                }
+            $values = Dotenv::parse(File::get($envPath));
+            if (array_key_exists($envKey, $values)) {
+                return $values[$envKey] ?? '';
             }
         }
 
@@ -1317,71 +1302,26 @@ final class RegisterServiceTool implements ToolContract
     }
 
     /**
-     * Read the previously-stored api_key for this service. Source order:
-     *   1. `<SERVICE>_API_KEY` in moonshine-v's .env (canonical — env()
-     *      wins at runtime so ops can rotate the token without
-     *      regenerating config).
-     *   2. Baked literal in `config/api-admin.php` (fallback used by
-     *      ServiceConfig::fromArray when env is missing).
-     *
-     * Returns an empty string if neither source yields a value — same
-     * behavior as before the preserve-api_key fix, so a brand-new
-     * service still ends up with no token until the caller passes one.
-     */
-    private function readExistingApiKey(string $name): string
-    {
-        $envPrefix = Str::upper(Str::snake(str_replace('-', '_', $name)));
-        $envKey = "{$envPrefix}_API_KEY";
-
-        $envPath = base_path('.env');
-        if (File::exists($envPath)) {
-            $content = File::get($envPath);
-            if (preg_match('/^'.preg_quote($envKey, '/').'=(.*)$/m', $content, $m) === 1) {
-                $value = trim($m[1]);
-                // Strip paired quotes that Laravel's env parser unwraps.
-                if (strlen($value) >= 2) {
-                    $first = $value[0];
-                    $last = $value[strlen($value) - 1];
-                    if (($first === '"' && $last === '"') || ($first === "'" && $last === "'")) {
-                        $value = substr($value, 1, -1);
-                    }
-                }
-                if ($value !== '') {
-                    return $value;
-                }
-            }
-        }
-
-        $configPath = config_path('api-admin.php');
-        if (File::exists($configPath)) {
-            /** @var array<string, mixed> $config */
-            $config = include $configPath;
-            $baked = data_get($config, "services.{$name}.api_key");
-            if (is_string($baked) && $baked !== '') {
-                return $baked;
-            }
-        }
-
-        return '';
-    }
-
-    /**
      * Read an arbitrary stored scalar field from an existing service config entry.
      * Used to preserve OAuth secrets (and similar) across re-registrations when
      * the caller omits the param. Returns '' if the service or field is absent.
      */
     private function readExistingServiceField(string $name, string $field): string
     {
-        $configPath = config_path('api-admin.php');
-        if (! File::exists($configPath)) {
-            return '';
+        foreach (array_unique([$this->generatedServicesPath(), config_path('api-admin.php')]) as $configPath) {
+            if (! File::exists($configPath)) {
+                continue;
+            }
+
+            /** @var array<string, mixed> $config */
+            $config = include $configPath;
+            $value = data_get($config, "services.{$name}.{$field}");
+            if (is_string($value)) {
+                return $value;
+            }
         }
 
-        /** @var array<string, mixed> $config */
-        $config = include $configPath;
-        $value = data_get($config, "services.{$name}.{$field}");
-
-        return is_string($value) ? $value : '';
+        return '';
     }
 
     /**
@@ -1501,7 +1441,7 @@ final class RegisterServiceTool implements ToolContract
     /**
      * Replace (or append) a single KEY=VALUE line in a .env file. Values
      * are wrapped in double quotes when they contain whitespace / special
-     * characters; empty values yield a bare KEY= line.
+     * characters; dollar signs and control characters stay literal on reload.
      *
      * `|` is included in the quoting trigger because some shells and
      * older parsers interpret it (pipe) when the .env file is sourced —
@@ -1512,11 +1452,12 @@ final class RegisterServiceTool implements ToolContract
     {
         $needsQuoting = $value === '' || preg_match('/[\s#"\'$\\\\|]/', $value) === 1;
         $escaped = $needsQuoting
-            ? '"'.addcslashes($value, '"\\').'"'
+            ? '"'.addcslashes($value, "\"\\$\n\r\t\v\f").'"'
             : $value;
 
         $newLine = "{$key}={$escaped}";
-        $pattern = '/^'.preg_quote($key, '/').'=.*$/m';
+        // Consume legacy multiline quoted values as one entry.
+        $pattern = '/^'.preg_quote($key, '/').'=(?:"(?:\\\\.|[^"\\\\])*"|\'[^\']*\'|[^\r\n]*)[ \t]*(?:#[^\r\n]*)?(?=\r?$)/m';
 
         if (preg_match($pattern, $content)) {
             return preg_replace_callback($pattern, static fn (): string => $newLine, $content) ?? $content;

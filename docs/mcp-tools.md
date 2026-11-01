@@ -340,6 +340,9 @@ compatibility URL that opens it. The tool returns whether a session is active
 and includes a sanitized proposal summary when available. It does not register
 services, create resources, or expose secrets.
 
+In hosted mode, an explicit `session_id` is looked up only inside the active
+tenant. Sessions from other tenants and legacy unscoped sessions are unavailable.
+
 ## health_check
 
 Pings one registered service or every service visible to the active tenant.

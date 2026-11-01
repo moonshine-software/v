@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\ApiAdmin\Instructor\InstructorSession;
+use App\ApiAdmin\Instructor\InstructorSessionRepository;
 use App\ApiAdmin\Providers\ApiAdminServiceProvider;
 use App\Models\ApiAdminMcpToken;
 use App\Models\ApiAdminTenant;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Client\Request as ClientRequest;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
@@ -259,6 +262,35 @@ final class HostedEditionSmokeTest extends TestCase
 
         Http::assertSent(fn (ClientRequest $request): bool => $request->url() === 'https://blog.test/api/health');
         Http::assertNotSent(fn (ClientRequest $request): bool => $request->url() === 'https://shop.test/api/health');
+    }
+
+    public function test_instructor_sessions_are_isolated_between_tenants_including_legacy_cache(): void
+    {
+        $this->createTenantToken('acme-token', 'Acme');
+        $this->createTenantToken('beta-token', 'Beta');
+        $sessionId = 'moonshine-user-42';
+        $repository = new InstructorSessionRepository;
+        $frame = [
+            'jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/call',
+            'params' => ['name' => 'instructor_status', 'arguments' => ['session_id' => $sessionId]],
+        ];
+        $this->withToken('acme-token')->postJson('/t/acme/api-admin/mcp', $frame)->assertOk();
+        $acme = new InstructorSession(id: $sessionId, proposal: ['service' => ['name' => 'private-acme']]);
+        $repository->save($acme);
+        Cache::put('api-admin:instructor:'.$sessionId, $acme->toArray(), 3600);
+
+        $response = $this->withToken('beta-token')->postJson('/t/beta/api-admin/mcp', $frame)
+            ->assertOk()->assertDontSee('private-acme');
+        $this->assertFalse($this->toolPayload($response->json('result.content.0.text'))['active']);
+        $repository->save(new InstructorSession(id: $sessionId, proposal: ['service' => ['name' => 'private-beta']]));
+        $response = $this->postJson('/t/beta/api-admin/mcp', $frame)->assertOk();
+        $this->assertSame('private-beta', data_get($this->toolPayload($response->json('result.content.0.text')), 'session.proposal.service.name'));
+        $repository->reset($sessionId);
+        $response = $this->postJson('/t/beta/api-admin/mcp', $frame)->assertOk();
+        $this->assertFalse($this->toolPayload($response->json('result.content.0.text'))['active']);
+
+        $response = $this->withToken('acme-token')->postJson('/t/acme/api-admin/mcp', $frame)->assertOk();
+        $this->assertSame('private-acme', data_get($this->toolPayload($response->json('result.content.0.text')), 'session.proposal.service.name'));
     }
 
     public function test_streamable_http_handshake_notifications_and_tool_discovery(): void

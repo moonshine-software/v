@@ -17,6 +17,7 @@ require __DIR__.'/../vendor/autoload.php';
 $app = require __DIR__.'/../bootstrap/app.php';
 $app->make(Kernel::class)->bootstrap();
 $tenant = ApiAdminTenant::query()->create(['slug' => 'acme', 'name' => 'Acme', 'active' => true]);
+$otherTenant = ApiAdminTenant::query()->create(['slug' => 'beta', 'name' => 'Beta', 'active' => true]);
 $ownerRole = MoonshineUserRole::query()->create(['id' => 1, 'name' => 'Admin']);
 $memberRole = MoonshineUserRole::query()->create(['id' => 2, 'name' => 'Tenant Member']);
 MoonshineUser::query()->create([
@@ -35,7 +36,11 @@ foreach ([
     DB::table('api_admin_tenant_memberships')->insert([
         'tenant_id' => $tenant->getKey(), 'moonshine_user_id' => $user->getKey(),
     ]);
-    if ($name !== 'Tenant Member') {
+    if ($name === 'Tenant Member') {
+        DB::table('api_admin_tenant_memberships')->insert([
+            'tenant_id' => $otherTenant->getKey(), 'moonshine_user_id' => $user->getKey(),
+        ]);
+    } else {
         MoonshineUserUpstreamIdentity::query()->create([
             'tenant_id' => $tenant->keyAsString(),
             'provider_service' => $name === 'PAT Member' ? 'hosted-pat' : 'hosted-oauth',

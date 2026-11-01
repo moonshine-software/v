@@ -257,8 +257,9 @@ requires human confirmation before files are generated.
 - **`instructor_status({session_id?})`** is read-only. It returns whether
   a browser instructor session exists and includes a sanitized proposal
   summary. It never registers services, creates resources, or returns
-  secrets. Use normal MCP tools or the browser confirmation flow for
-  mutations.
+  secrets. Hosted sessions are isolated to the active tenant, including
+  when an explicit session ID is supplied. Use normal MCP tools or the browser
+  confirmation flow for mutations.
 
 ## Terminology cheatsheet
 
@@ -486,6 +487,10 @@ In hosted mode service secrets are tenant-scoped: `api_key`,
 `oauth_client_secret`, delegated OAuth/session passwords, refresh tokens,
 and webhook secrets are stored through `TenantSecretStore`, not `.env`,
 and generated PHP config uses empty secret fallbacks.
+
+In both modes, omitted secrets preserve their stored values; an explicit empty
+string clears a secret unless the selected auth/realtime mode requires it.
+Local `.env` storage preserves literal dollar signs, quotes and backslashes.
 
 ### `health_path` (inside `register_service`)
 

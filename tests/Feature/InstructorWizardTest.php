@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\ApiAdmin\Instructor\InstructorSession;
+use App\ApiAdmin\Instructor\InstructorSessionRepository;
 use App\ApiAdmin\Tenancy\TenantContext;
 use App\ApiAdmin\Tenancy\TenantResolver;
 use App\Models\ApiAdminTenant;
 use App\MoonShine\ApiAdmin\Pages\InstructorPage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use MoonShine\Laravel\Models\MoonshineUser;
+use RuntimeException;
 use Tests\TestCase;
 
 final class InstructorWizardTest extends TestCase
@@ -107,6 +111,24 @@ final class InstructorWizardTest extends TestCase
         Http::assertNothingSent();
         DB::table('api_admin_tenant_memberships')->insert(['tenant_id' => $tenant->getKey(), 'moonshine_user_id' => $this->user()->getKey()]);
         $this->get('/api-admin/instructor')->assertRedirect();
+    }
+
+    public function test_hosted_instructor_requires_tenant_context_instead_of_using_legacy_state(): void
+    {
+        config(['api-admin.hosted.mode' => 'hosted']);
+        app()->instance(TenantResolver::class, new class implements TenantResolver
+        {
+            public function resolve(): ?TenantContext
+            {
+                return null;
+            }
+        });
+        $session = new InstructorSession(id: 'moonshine-user-42', proposal: ['service' => ['name' => 'private']]);
+        Cache::put('api-admin:instructor:'.$session->id, $session->toArray(), 3600);
+        $repository = new InstructorSessionRepository;
+        $this->assertNull($repository->load($session->id));
+        $this->expectException(RuntimeException::class);
+        $repository->save($session);
     }
 
     private function user(): MoonshineUser

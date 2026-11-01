@@ -70,6 +70,12 @@ protocol, ask them to open an issue in the project repository so we can evaluate
 
 ## OAuth rotation and record IDs
 
+When re-registering a service, omitted secrets retain their stored values in
+local and hosted modes. An explicit empty string clears a secret; required
+OAuth/session credentials and enabled hosted webhook secrets still fail
+validation if empty. Local `.env` serialization preserves literal dollar signs,
+quotes, backslashes and control characters across reloads and re-registration.
+
 Service OAuth refresh tokens are stored encrypted in the database, separately
 for each tenant, service, administrator, client/token URL and initial seed.
 Clearing application cache does not discard the latest rotation. Concurrent

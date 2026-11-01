@@ -17,7 +17,7 @@ final class InstructorStatusTool implements ToolContract
     {
         return [
             'name' => 'instructor_status',
-            'description' => 'Read the built-in instructor onboarding session status and sanitized proposal summary. Read-only; does not register services or generate resources.',
+            'description' => 'Read the built-in instructor onboarding session status and sanitized proposal summary within the active tenant. Read-only; does not register services or generate resources.',
             'inputSchema' => [
                 'type' => 'object',
                 'properties' => [
