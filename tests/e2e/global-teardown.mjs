@@ -1,13 +1,17 @@
 import { copyFileSync, existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { STATE_FILE } from './environment.mjs';
+import { activeWorkDirectory } from './global-setup.mjs';
 
 export default async function globalTeardown() {
-    if (! existsSync(STATE_FILE)) {
+    if (! activeWorkDirectory || ! existsSync(STATE_FILE)) {
         return;
     }
 
     const { workDirectory, pids } = JSON.parse(readFileSync(STATE_FILE, 'utf8'));
+    if (workDirectory !== activeWorkDirectory) {
+        throw new Error('E2E state belongs to another run; refusing to stop its servers.');
+    }
 
     for (const pid of pids) {
         try {

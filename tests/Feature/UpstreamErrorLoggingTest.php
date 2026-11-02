@@ -63,7 +63,7 @@ final class UpstreamErrorLoggingTest extends TestCase
             $this->assertStringNotContainsString($secret, $recorded);
         }
         $this->assertContains([
-            '[FIX:upstream-error] UpstreamErrorResponder::fromThrowable',
+            'UpstreamErrorResponder::fromThrowable',
             ['exception' => $network ? ConnectionException::class : RequestException::class, 'status' => $network ? null : 500],
         ], $logs);
     }

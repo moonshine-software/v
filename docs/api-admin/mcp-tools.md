@@ -47,6 +47,7 @@ Register a new microservice in the admin panel.
 | `auth_type` | string | no | `bearer`, `header`, `query`, `basic`, `oauth2_cc`, `oauth2_password`, `oauth2_refresh_token`, `session`, or `none` (default: `bearer`) |
 | `auth_header` | string | no | Custom header name when auth_type is `header` |
 | `admin_login` | boolean | no | For `oauth2_password` or `session`, validate `/<panel>/login` credentials against the upstream service and store only token/cookie-state in Laravel session. Do not pass upstream user passwords during registration in this mode. |
+| `response_format` | string | no | Mapping preset: `laravel`, `django`, `flat`, `github` (bare array + Link header) or `custom` |
 | `response_mapping` | object | no | API response key mapping |
 | `realtime` | object | no | Upstream webhook + browser refresh settings. Use Laravel Reverb as the recommended broadcaster backend via normal Laravel broadcasting config; this stores the service webhook contract. |
 
@@ -148,7 +149,12 @@ MoonShine panel entry.
 Create a native MoonShine `ModelResource` for an existing Eloquent model.
 
 **Creates:** Resource PHP class plus Index/Form/Detail page classes under the
-configured local resource namespace.
+configured local resource namespace. Names share that namespace across panels:
+regeneration may overwrite only a resource belonging to the same panel. A
+conflicting or unassigned directory returns `GENERATION_FAILED`. Native
+`MoonShineUser`/`MoonShineUserRole` names and aliases are reserved. An explicit `panel` must match the selected service or the tool
+returns `LOCAL_PANEL_MISMATCH`. Local service
+registration/removal also rejects `admin-hub` aliases to protect the system hub.
 
 ### Parameters
 
@@ -366,13 +372,16 @@ sidecar does not exist. Read-only.
 ### remove_service
 
 Input: `{name, confirm: true}`. Removes the service config, layout, resources
-and registry entries. Destructive.
+and registry entries. For local services, only resources explicitly assigned
+to that service's panel are deleted; native and unassigned resources remain.
+Destructive.
 
 ### remove_resource
 
 Input: `{service, name, confirm: true}`. Removes one resource directory with its
 pages. Destructive. Removing a name that matches nothing succeeds with an empty
-`removed_paths`.
+`removed_paths`. Local resources must explicitly belong to the selected panel;
+native platform resources are preserved.
 
 Singular and plural forms of a resource name address the same resource in every
 tool. An existing resource wins, so `posts` reaches an existing `Post`.

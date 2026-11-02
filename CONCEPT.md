@@ -188,7 +188,7 @@ Technically this is a thin wrapper around `AbstractRestResource`: the same `find
 - **Panel** — URL prefix + layout + menu for one service (example: `/blog-admin/`).
 - **Resource** — a CRUD entity of a service (example: `post`, `author`). Generates Index / Form / Detail pages.
 - **MCP** — Model Context Protocol. The protocol an AI agent (Claude Code, Cursor) uses to talk to moonshine-v tools.
-- **Preset** — a ready-made `response_mapping` for a specific API format (`laravel`, `django`, `flat`, `custom`).
+- **Preset** — a ready-made `response_mapping` for a specific API format (`laravel`, `django`, `flat`, `github`, `custom`).
 - **Relation resource** — a subordinate resource that exists only in the context of a has_one/has_many parent (example: `Comment` inside `Post`). Generated automatically by `create_resource(..., fields: [{type: "has_many", fields: [...]}])`.
 
 ---

@@ -1,12 +1,14 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { cpSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { createServer } from 'node:net';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ADMIN, API_DIRECTORIES, API_PORTS, BASE_URL, HOSTED_URL, STATE_FILE } from './environment.mjs';
 
 const repository = realpathSync(fileURLToPath(new URL('../..', import.meta.url)));
 const composer = process.env.COMPOSER_BINARY ?? 'composer';
+export let activeWorkDirectory;
 
 function run(command, args, cwd, env = {}) {
     execFileSync(command, args, { cwd, stdio: ['ignore', 'pipe', 'inherit'], env: { ...process.env, ...env } });
@@ -53,30 +55,58 @@ function writeEnvironment(target) {
     writeFileSync(join(target, 'database/e2e.sqlite'), '');
 }
 
-function startProcess(command, args, cwd, env = {}) {
+export async function assertPortsAvailable(urls) {
+    for (const url of urls) {
+        const { hostname, port } = new URL(url);
+        await new Promise((resolve, reject) => {
+            const server = createServer();
+            server.once('error', error => reject(new Error(`E2E address ${hostname}:${port} is unavailable. Stop the conflicting server before running tests.`, { cause: error })));
+            server.listen({ host: hostname, port: Number(port), exclusive: true }, () => server.close(resolve));
+        });
+    }
+}
+
+export function startProcess(command, args, cwd, env = {}) {
     const child = spawn(command, args, { cwd, detached: true, stdio: 'ignore', env: { ...process.env, ...env } });
     child.unref();
 
-    return child.pid;
+    return child;
 }
 
-async function waitFor(url) {
+export async function waitFor(url, child) {
     const deadline = Date.now() + 60_000;
-    while (Date.now() < deadline) {
-        try {
-            if ((await fetch(url, { redirect: 'manual' })).status < 500) {
-                return;
-            }
-        } catch {
-            // Not listening yet.
+    let spawnError;
+    const onError = error => { spawnError = error; };
+    child.once('error', onError);
+    const assertRunning = () => {
+        if (spawnError) throw new Error(`Could not start E2E server for ${url}: ${spawnError.message}`, { cause: spawnError });
+        if (child.exitCode !== null || child.signalCode !== null) {
+            throw new Error(`E2E server for ${url} exited before readiness (${child.signalCode ?? child.exitCode}).`);
         }
-        await new Promise((resolve) => setTimeout(resolve, 250));
+    };
+    try {
+        while (Date.now() < deadline) {
+            assertRunning();
+            let response;
+            try {
+                response = await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(1000) });
+            } catch {
+                // Not listening yet.
+            }
+            assertRunning();
+            if (response && response.status < 500) return;
+            await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+        throw new Error(`Timed out waiting for ${url}`);
+    } finally {
+        child.removeListener('error', onError);
     }
-    throw new Error(`Timed out waiting for ${url}`);
 }
 
 export default async function globalSetup() {
+    await assertPortsAvailable([BASE_URL, HOSTED_URL, ...Object.values(API_PORTS).map(port => `http://127.0.0.1:${port}`)]);
     const workDirectory = realpathSync(mkdtempSync(join(tmpdir(), 'moonshine-v-e2e-')));
+    activeWorkDirectory = workDirectory;
     const pids = [];
     mkdirSync(dirname(fileURLToPath(STATE_FILE)), { recursive: true });
     // Written first, so teardown cleans up even when provisioning fails.
@@ -90,11 +120,12 @@ export default async function globalSetup() {
     run('php', ['artisan', 'migrate', '--force', '--no-ansi'], workDirectory);
 
     for (const [name, port] of Object.entries(API_PORTS)) {
-        pids.push(startProcess('php', ['-S', `127.0.0.1:${port}`, 'server.php'], join(workDirectory, API_DIRECTORIES[name]), {
+        const child = startProcess('php', ['-S', `127.0.0.1:${port}`, 'server.php'], join(workDirectory, API_DIRECTORIES[name]), {
             E2E_OAUTH_REDIRECT_URI: `${HOSTED_URL}/t/acme/hosted-oauth-admin/oauth/callback`,
-        }));
+        });
+        if (child.pid !== undefined) pids.push(child.pid);
         saveState();
-        await waitFor(`http://127.0.0.1:${port}/health`);
+        await waitFor(`http://127.0.0.1:${port}/health`, child);
     }
 
     run('php', ['scripts/e2e-provision.php'], workDirectory, {
@@ -121,14 +152,16 @@ export default async function globalSetup() {
     run(composer, ['dump-autoload', '-o', '-q', '--no-scripts'], workDirectory);
 
     const { hostname, port } = new URL(BASE_URL);
-    pids.push(startProcess('php', ['artisan', 'serve', `--host=${hostname}`, `--port=${port}`, '--no-reload'], workDirectory, {
+    const appServer = startProcess('php', ['artisan', 'serve', `--host=${hostname}`, `--port=${port}`, '--no-reload'], workDirectory, {
         PHP_CLI_SERVER_WORKERS: '4',
-    }));
+    });
+    if (appServer.pid !== undefined) pids.push(appServer.pid);
     saveState();
-    await waitFor(`${BASE_URL}/admin/login`);
+    await waitFor(`${BASE_URL}/admin/login`, appServer);
 
     const hostedAddress = new URL(HOSTED_URL);
-    pids.push(startProcess('php', ['artisan', 'serve', `--host=${hostedAddress.hostname}`, `--port=${hostedAddress.port}`, '--no-reload'], workDirectory, hostedEnvironment));
+    const hostedServer = startProcess('php', ['artisan', 'serve', `--host=${hostedAddress.hostname}`, `--port=${hostedAddress.port}`, '--no-reload'], workDirectory, hostedEnvironment);
+    if (hostedServer.pid !== undefined) pids.push(hostedServer.pid);
     saveState();
-    await waitFor(`${HOSTED_URL}/t/acme/admin/login`);
+    await waitFor(`${HOSTED_URL}/t/acme/admin/login`, hostedServer);
 }

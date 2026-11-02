@@ -25,7 +25,7 @@ final class RemoveResourceTool implements ToolContract
     {
         return [
             'name' => 'remove_resource',
-            'description' => 'Generation changes are serialized and rolled back on failure. Delete a generated resource (directory + pages). Leaves the service, panel, and sibling resources. Destructive — pass confirm=true.',
+            'description' => 'Generation changes are serialized and rolled back on failure. Delete a generated resource (directory + pages). Local resources must explicitly belong to the selected panel; native platform resources are protected. Leaves the service, panel, and sibling resources. Destructive — pass confirm=true.',
             'inputSchema' => [
                 'type' => 'object',
                 'properties' => [

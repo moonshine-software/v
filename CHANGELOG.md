@@ -19,5 +19,11 @@ First public version.
 
 ### Fixed
 
+- Preserve the system hub and native administrator resources during code generation and removal.
+- Reject local resource overwrites across panels and remove Eloquent files only for their owning panel.
+- Group numeric aggregate keys without a sorting error.
+- Reject occupied E2E ports and failed server processes instead of testing a stale application.
+- Remove temporary fix labels from runtime diagnostics.
+
 - Upstream error logs omit response bodies and exception messages that can contain credentials.
 - Installer backup and restore support the local Compose override, preserving HTTP and cookie settings after restart.

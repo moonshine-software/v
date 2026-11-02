@@ -9,6 +9,7 @@ use App\ApiAdmin\Tenancy\TenantResolver;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use PhpToken;
 use RuntimeException;
 
 /**
@@ -27,6 +28,17 @@ final class ServiceRegistry
     public const string SERVICE_KIND_REST = 'rest';
 
     public const string SERVICE_KIND_LOCAL = 'local';
+
+    public const array RESERVED_LOCAL_RESOURCE_NAMES = ['MoonShineUser', 'MoonShineUserRole'];
+
+    public static function isReservedLocalResourceName(string $name): bool
+    {
+        return in_array(
+            strtolower(Str::studly($name)),
+            array_map(strtolower(...), self::RESERVED_LOCAL_RESOURCE_NAMES),
+            true,
+        );
+    }
 
     /**
      * List all registered services with paths + resource counts.
@@ -93,19 +105,21 @@ final class ServiceRegistry
         }
 
         $panel = $serviceConfig['panel'] ?? null;
-        $panel = is_string($panel) && $panel !== '' ? $panel : null;
+        if (! is_string($panel) || $panel === '') {
+            return [];
+        }
         $out = [];
 
         foreach ($this->subDirectories($resourcesBase) as $resourceDir) {
             $resourceBase = basename($resourceDir);
             $resourceFile = $resourceDir.'/'.$resourceBase.'Resource.php';
 
-            if (! File::isFile($resourceFile)) {
+            if (self::isReservedLocalResourceName($resourceBase) || ! File::isFile($resourceFile)) {
                 continue;
             }
 
             $resourcePanel = $this->parsePanel($resourceFile);
-            if ($panel !== null && $resourcePanel !== null && $resourcePanel !== $panel) {
+            if ($resourcePanel !== $panel) {
                 continue;
             }
 
@@ -215,7 +229,10 @@ final class ServiceRegistry
      */
     public function resourceBaseName(string $service, string $name): string
     {
-        $serviceDir = $this->resourcesPath().'/'.Str::studly($service);
+        $serviceConfig = $this->visibleServices()[$service] ?? [];
+        $serviceDir = $this->serviceKind($serviceConfig) === self::SERVICE_KIND_LOCAL
+            ? $this->localResourcesPath()
+            : $this->resourcesPath().'/'.Str::studly($service);
         $exact = Str::studly($name);
 
         foreach ([$exact, Str::studly(Str::singular($name)), Str::studly(Str::plural($name))] as $candidate) {
@@ -256,8 +273,13 @@ final class ServiceRegistry
     {
         $this->assertServiceVisibleToCurrentTenant($name);
 
-        $service = config("api-admin.services.$name");
-        $panel = is_array($service) ? ($service['panel'] ?? null) : null;
+        if (! $this->hostedMode() && strtolower(Str::studly($name)) === 'adminhub') {
+            throw new RuntimeException('The AdminHub layout is reserved by the application.');
+        }
+
+        $service = $this->visibleServices()[$name] ?? [];
+        $panel = $service['panel'] ?? null;
+        $this->assertRemovableServicePanel($name, $service);
 
         $removed = [
             'service' => $name,
@@ -265,11 +287,20 @@ final class ServiceRegistry
             'paths' => [],
         ];
 
-        // Resources dir
-        $serviceDir = $this->resourcesPath().'/'.Str::studly($name);
-        if (File::isDirectory($serviceDir)) {
-            AtomicFileWriter::deleteDirectory($serviceDir);
-            $removed['paths'][] = $serviceDir;
+        if ($this->serviceKind($service) === self::SERVICE_KIND_LOCAL) {
+            foreach ($this->listLocalResources($name, $service) as $resource) {
+                $resourceDir = $resource['resource_dir'];
+                if (is_string($resourceDir)) {
+                    AtomicFileWriter::deleteDirectory($resourceDir);
+                    $removed['paths'][] = $resourceDir;
+                }
+            }
+        } else {
+            $serviceDir = $this->resourcesPath().'/'.Str::studly($name);
+            if (File::isDirectory($serviceDir)) {
+                AtomicFileWriter::deleteDirectory($serviceDir);
+                $removed['paths'][] = $serviceDir;
+            }
         }
 
         // Config file
@@ -313,7 +344,18 @@ final class ServiceRegistry
     {
         $this->assertServiceVisibleToCurrentTenant($service);
 
-        $resourceDir = $this->resourcesPath().'/'.Str::studly($service).'/'.$this->resourceBaseName($service, $name);
+        $serviceConfig = $this->visibleServices()[$service] ?? [];
+        $this->assertRemovableServicePanel($service, $serviceConfig);
+        $baseName = $this->resourceBaseName($service, $name);
+        if ($this->serviceKind($serviceConfig) === self::SERVICE_KIND_LOCAL) {
+            $resource = array_find(
+                $this->listLocalResources($service, $serviceConfig),
+                static fn (array $resource): bool => $resource['base_name'] === $baseName,
+            );
+            $resourceDir = $resource['resource_dir'] ?? null;
+        } else {
+            $resourceDir = $this->resourcesPath().'/'.Str::studly($service).'/'.$baseName;
+        }
 
         $removed = [
             'service' => $service,
@@ -321,7 +363,7 @@ final class ServiceRegistry
             'paths' => [],
         ];
 
-        if (File::isDirectory($resourceDir)) {
+        if (is_string($resourceDir) && File::isDirectory($resourceDir)) {
             AtomicFileWriter::deleteDirectory($resourceDir);
             $removed['paths'][] = $resourceDir;
         }
@@ -334,6 +376,31 @@ final class ServiceRegistry
         ]);
 
         return $removed;
+    }
+
+    /** @param array<string, mixed> $serviceConfig */
+    private function assertRemovableServicePanel(string $service, array $serviceConfig): void
+    {
+        $panel = $serviceConfig['panel'] ?? null;
+        if (! is_string($panel) || $panel === '') {
+            return;
+        }
+
+        if ($panel === 'admin') {
+            throw new RuntimeException('The admin panel is reserved by the application.');
+        }
+
+        if ($this->serviceKind($serviceConfig) !== self::SERVICE_KIND_LOCAL) {
+            return;
+        }
+
+        foreach ($this->visibleServices() as $name => $config) {
+            if ($name !== $service && ($config['panel'] ?? null) === $panel) {
+                throw new RuntimeException(
+                    "Panel '{$panel}' is shared by multiple services; resolve its ownership before removing local resources.",
+                );
+            }
+        }
     }
 
     /**
@@ -686,7 +753,7 @@ final class ServiceRegistry
         return null;
     }
 
-    private function parsePanel(string $file): ?string
+    public function parsePanel(string $file): ?string
     {
         $contents = (string) @file_get_contents($file);
 
@@ -694,8 +761,22 @@ final class ServiceRegistry
             return null;
         }
 
-        if (preg_match('/protected\s+string\s+\$panel\s*=\s*[\'"]([^\'"]+)[\'"]\s*;/s', $contents, $m)) {
-            return $m[1];
+        $tokens = array_values(array_filter(
+            PhpToken::tokenize($contents),
+            static fn (PhpToken $token): bool => ! $token->isIgnorable(),
+        ));
+
+        foreach ($tokens as $index => $token) {
+            if ($token->id === T_PROTECTED
+                && ($tokens[$index + 1] ?? null)?->id === T_STRING
+                && $tokens[$index + 1]->text === 'string'
+                && ($tokens[$index + 2] ?? null)?->id === T_VARIABLE
+                && $tokens[$index + 2]->text === '$panel'
+                && ($tokens[$index + 3] ?? null)?->text === '='
+                && ($tokens[$index + 4] ?? null)?->id === T_CONSTANT_ENCAPSED_STRING
+                && ($tokens[$index + 5] ?? null)?->text === ';') {
+                return substr($tokens[$index + 4]->text, 1, -1);
+            }
         }
 
         return null;

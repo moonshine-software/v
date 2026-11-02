@@ -418,6 +418,16 @@ final class RegisterServiceTool implements ToolContract
             }
         }
 
+        if ($this->currentTenantContext()->isLocal && strtolower(Str::studly($name)) === 'adminhub') {
+            Log::warning('Rejected reserved service name', ['name' => $name]);
+
+            return [
+                'success' => false,
+                'code' => 'MCP_NAME_CONFLICT',
+                'error' => 'The AdminHub layout is reserved for the platform service hub.',
+            ];
+        }
+
         // Preserve the previously-stored api_key when the caller omits it.
         // Re-registering an existing service to tweak response_mapping or
         // panel should NOT blow away the token — that silently broke every

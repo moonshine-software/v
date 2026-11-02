@@ -60,14 +60,21 @@ Creates a new panel for a microservice.
 |-----------|------|----------|-------------|
 | `name` | string | yes | Service identifier (used in URL prefix and config) |
 | `base_url` | string | yes | Base URL of the microservice API |
-| `api_key` | string | yes | API key for authentication |
+| `api_key` | string | no | API key for authentication; omitted values keep the stored secret |
+| `panel` | string | no | Panel identifier (default: `{name}-admin`) |
 | `auth_type` | string | no | Server-to-upstream API auth scheme, such as `bearer`, `header`, `query`, `basic`, `oauth2_cc`, `oauth2_password`, `oauth2_refresh_token`, `session`, or `none` |
+| `auth_header` | string | no | Custom header name when `auth_type` is `header` |
 | `admin_login` | boolean | no | Legacy delegated username/password panel login for `oauth2_password` or `session` services |
 | `admin_auth_mode` | string | no | Human panel login mode: `moonshine`, `delegated_token`, or `oauth2_authorization_code` |
 | `admin_auth` | object | no | Per-panel login metadata. Use `validate_endpoint` for `delegated_token`; use `authorize_url`, `token_url`, `scopes`, and `redirect_uri` for OAuth2 SSO |
 | `title` | string | no | Human-readable panel title (defaults to `name`) |
+| `response_format` | string | no | Mapping preset: `laravel`, `django`, `flat`, `github` (bare array + Link header) or `custom` |
 | `response_mapping` | object | no | API response format mapping (see [Configuration](configuration.md)) |
-| `palette` | object | no | Color palette for the panel |
+| `realtime` | object | no | Upstream webhook and browser refresh settings; omit it to keep the stored settings |
+
+OAuth2 (`token_url`, `oauth_*`), session (`session_*`, `csrf_*`) and
+`health_path` parameters are described in the
+[detailed schemas](api-admin/mcp-tools.md) and [Configuration](configuration.md).
 
 Do not put panel login modes in `auth_type`. Use `auth_type` for how the
 server talks to the upstream API, and `admin_auth_mode` for how a human signs
@@ -160,6 +167,13 @@ Laravel application. Do not pass REST-only keys such as `base_url`, `api_key`,
 
 Generates a native MoonShine `ModelResource` and page classes for an existing
 Eloquent model in a registered local service.
+
+Local resource names share a namespace. Regeneration is allowed only for the
+existing resource's panel; conflicts and unassigned directories return
+`GENERATION_FAILED`. `MoonShineUser` and `MoonShineUserRole` names and aliases
+are reserved. An explicit `panel` must match the selected service or the tool
+returns `LOCAL_PANEL_MISMATCH`. Local service registration/removal also reserves `admin-hub`
+aliases to protect the system layout.
 
 **Parameters:**
 

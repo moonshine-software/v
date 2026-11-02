@@ -38,7 +38,7 @@ register_service({
   auth_type: "bearer",
   panel: "<svc>-admin",
   title: "<Display Title>",
-  response_format: "laravel" | "django" | "flat" | "custom"
+  response_format: "laravel" | "django" | "flat" | "github" | "custom"
 })
 ```
 

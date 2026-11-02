@@ -81,7 +81,7 @@ final class AggregateCalculator
             }
 
             $out[] = [
-                'key' => $key,
+                'key' => strval($key),
                 'value' => $value['value'] ?? null,
                 'count' => count($rows),
                 'skipped_non_numeric' => $value['skipped_non_numeric'] ?? 0,

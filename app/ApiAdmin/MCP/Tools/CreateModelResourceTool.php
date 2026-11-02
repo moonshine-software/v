@@ -34,7 +34,7 @@ final class CreateModelResourceTool implements ToolContract
     {
         return [
             'name' => 'create_model_resource',
-            'description' => 'Generation changes are serialized and rolled back on failure. Available only in trusted local mode; hosted calls are rejected even with wildcard token scopes. Create a native MoonShine ModelResource for a registered local/Eloquent service. Refuses REST services.',
+            'description' => 'Generation changes are serialized and rolled back on failure. Available only in trusted local mode; hosted calls are rejected even with wildcard token scopes. Create a native MoonShine ModelResource for a registered local/Eloquent service. Refuses REST services, native platform names and existing resources owned by another panel.',
             'inputSchema' => [
                 'type' => 'object',
                 'properties' => [
@@ -56,7 +56,7 @@ final class CreateModelResourceTool implements ToolContract
                     ],
                     'panel' => [
                         'type' => 'string',
-                        'description' => 'Panel identifier. Defaults to the local service panel.',
+                        'description' => 'Panel identifier. Defaults to and must match the registered local service panel.',
                     ],
                     'group' => [
                         'type' => 'string',
@@ -205,11 +205,18 @@ final class CreateModelResourceTool implements ToolContract
             ];
         }
 
-        if (! is_string($params['panel'] ?? null) || trim($params['panel']) === '') {
-            $panel = $serviceConfig['panel'] ?? null;
-            if (is_string($panel) && $panel !== '') {
-                $params['panel'] = $panel;
-            }
+        $panel = $serviceConfig['panel'] ?? null;
+        if (is_string($params['panel'] ?? null) && trim($params['panel']) !== '' && trim($params['panel']) !== $panel) {
+            Log::warning('CreateModelResourceTool: rejected foreign panel', ['service' => $service]);
+
+            return [
+                'success' => false,
+                'code' => 'LOCAL_PANEL_MISMATCH',
+                'error' => 'The resource panel must match the registered local service panel.',
+            ];
+        }
+        if (is_string($panel) && $panel !== '') {
+            $params['panel'] = $panel;
         }
 
         try {

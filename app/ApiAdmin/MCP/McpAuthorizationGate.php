@@ -123,7 +123,7 @@ final class McpAuthorizationGate
             }
         }
 
-        if ($toolName === 'register_service') {
+        if (in_array($toolName, ['register_service', 'initialize_local_service'], true)) {
             $collision = $this->registrationCollision($params);
             if ($collision !== null) {
                 return McpAuthorizationResult::deny('MCP_NAME_CONFLICT', $collision);

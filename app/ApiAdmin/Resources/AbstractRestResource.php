@@ -972,7 +972,7 @@ abstract class AbstractRestResource extends CrudResource
         }
 
         if ($match === null) {
-            Log::warning('[FIX:list-identity] Requested record absent from list response', [
+            Log::warning('Requested record absent from list response', [
                 'resource' => static::class,
                 'item_id' => $itemId,
             ]);

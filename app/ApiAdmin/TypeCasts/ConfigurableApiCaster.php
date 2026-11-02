@@ -122,7 +122,7 @@ final readonly class ConfigurableApiCaster implements DataCasterContract
             $path = \Illuminate\Pagination\Paginator::resolveCurrentPath();
             $prevPageUrl = $this->localPageUrl($prevPageUrl, $path);
             $nextPageUrl = $this->localPageUrl($nextPageUrl, $path);
-            Log::debug('[FIX:body-pagination] Using upstream page navigation', ['current_page' => $currentPage]);
+            Log::debug('Using upstream page navigation', ['current_page' => $currentPage]);
         } else {
             $pageUrl = fn (int $page): string => $this->pageUrl($page, $path);
             $prevPageUrl ??= $currentPage > 1 ? $pageUrl($currentPage - 1) : null;

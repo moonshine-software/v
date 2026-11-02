@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\ApiAdmin\MCP\Generator;
 
 use App\ApiAdmin\MCP\AtomicFileWriter;
+use App\ApiAdmin\MCP\ServiceRegistry;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use LogicException;
 use MoonShine\UI\Fields\Checkbox;
 use MoonShine\UI\Fields\Color;
 use MoonShine\UI\Fields\Date;
@@ -85,16 +87,32 @@ final class ModelResourceGenerator
         $searchFields = is_array($params['search'] ?? null) ? array_values(array_filter($params['search'], is_string(...))) : [];
 
         $resourceBaseName = Str::studly($resourceName);
+        if (ServiceRegistry::isReservedLocalResourceName($resourceBaseName)) {
+            throw new LogicException("Local resource name '{$resourceName}' is reserved for platform administration.");
+        }
+
+        $basePath = $this->localResourcesPath();
+        foreach (File::isDirectory($basePath) ? File::directories($basePath) : [] as $existingDirectory) {
+            if (is_string($existingDirectory) && strcasecmp(basename($existingDirectory), $resourceBaseName) === 0) {
+                $resourceBaseName = basename($existingDirectory);
+                break;
+            }
+        }
+
         $className = $resourceBaseName.'Resource';
         $indexPageClass = $resourceBaseName.'IndexPage';
         $formPageClass = $resourceBaseName.'FormPage';
         $detailPageClass = $resourceBaseName.'DetailPage';
-        $basePath = $this->localResourcesPath();
         $namespace = $this->baseNamespace().'\\'.$resourceBaseName;
         $pagesNamespace = $namespace.'\\Pages';
         $resourceDir = $basePath.'/'.$resourceBaseName;
         $pagesDir = $resourceDir.'/Pages';
         $filePath = $resourceDir.'/'.$className.'.php';
+
+        if (File::isDirectory($resourceDir)
+            && (! File::isFile($filePath) || (new ServiceRegistry)->parsePanel($filePath) !== $panel)) {
+            throw new LogicException("Local resource '{$resourceName}' already exists outside panel '{$panel}'.");
+        }
 
         Log::debug('ModelResourceGenerator: generating', [
             'resource' => $resourceName,

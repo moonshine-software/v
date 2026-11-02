@@ -35,7 +35,7 @@ register_service(
   base_url: "http://localhost:8081",
   api_key: "<optional>",
   auth_type: "bearer" | "header" | "query" | "none",
-  response_format: "laravel" | "django" | "flat" | "custom"
+  response_format: "laravel" | "django" | "flat" | "github" | "custom"
 )
 ```
 

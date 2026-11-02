@@ -2,7 +2,7 @@
 
 # Release readiness
 
-Last verified: 2026-11-02. The PHP gate, Chrome E2E, installer tests and Docker recovery checks were rerun on this date; the other results below were recorded on 2026-11-01. This does not replace checking your own infrastructure.
+Last verified: 2026-11-02. The PHP gate, Chrome E2E, Node tests, generator checks and Docker recovery checks were rerun on this date; the other results below were recorded on 2026-11-01. This does not replace checking your own infrastructure.
 
 ## Status
 
@@ -24,10 +24,10 @@ Before tagging a release:
 | Check | Result |
 |---|---|
 | `XDEBUG_MODE=off composer ai:validate` | Exit 0: Pint, Rector, production audit, PHPStan level max, PHPUnit |
-| PHPUnit | **923 passed, 4777 assertions**, including real API compatibility, HTTP authorization, secret-free save/error diagnostics and hosted tenant/token provisioning commands |
+| PHPUnit | **967 passed, 5051 assertions**, including real API compatibility, HTTP authorization, secret-free save/error diagnostics and hosted tenant/token provisioning commands |
 | Chrome E2E (`npm run test:e2e`) | **49 passed**, including hosted onboarding, Django navigation, custom field tools and authenticated Link-header pagination with filters/search/sort |
 | Concurrent generator/field-tool tests | Two simultaneous processes pass, sharing the same checkout and temporary-directory base |
-| Installer unit tests (`npm run test:installer`) | **16 passed** |
+| Installer and E2E setup tests (`npm run test:installer`) | **23 passed**: 16 installer and 7 E2E lifecycle checks |
 | Fresh Docker installation (`npm run test:installer:docker`) | Passed: secret exclusion, administrator login, MCP discovery, backup/damage/restore, HTTP cookies, resume and restart persistence |
 | Production smoke (`docker/smoke.sh`) | Passed: PostgreSQL, Redis, queue, generated state, custom field tools, container recreation, backup/restore, backend outage |
 | Development stack (`docker/docker-compose.yml`) | Passed: all services healthy, custom host ports, generation and data tools through `docker exec` MCP |
@@ -40,6 +40,10 @@ Hosted MCP was also exercised with the official MCP SDK: handshake, ping, `tools
 
 | Finding | Resolution and evidence |
 |---|---|
+| Generation could overwrite system or another panel's files | Reserved hub/native names and platform panels are protected. Local service panels are unique; explicit resource panels must match their service. Feature tests verify unchanged files on rejection, same-owner regeneration and safe ownership parsing of PHP declarations. |
+| Local removal left Eloquent resources behind | Removal selects only explicitly owned local resources, preserves native/unassigned/foreign files, rejects ambiguous legacy panels and restores files/registries after an outer failure. |
+| Numeric aggregate groups crashed sorting | Group keys remain strings after PHP normalizes array keys. An MCP feature test covers count/sum over integer and numeric-string groups, including zero and negative values. |
+| Browser setup connected to stale test servers | Required ports are checked before provisioning, readiness observes the spawned processes, and teardown accepts only this run's state. Seven Node regressions cover conflicts, failed/early exits, readiness and stale cleanup. |
 | Hosted tenants and MCP tokens could be created only through direct database access | `api-admin:tenant` creates, lists, activates and deactivates tenants; `api-admin:mcp-token` issues tokens with an explicit scope allowlist, shows them once, stores only SHA-256 hashes, lists them without secrets and revokes them. Tests cover slug/scope validation, foreign token revocation and a command-issued token working over hosted MCP until deactivation or revocation. |
 | Upstream exceptions copied credentials into logs | Error diagnostics retain only the exception class and HTTP status. Feature tests exercise MCP item creation with secrets in a 500 response and a connection-error URL, verify no secret reaches logs, and preserve the MCP error response. |
 | Installer backup left the application stopped | `PRODUCTION_COMPOSE_OVERRIDE` applies the local override to every backup/restore command. The installer Docker test backs up, damages and restores generated state, encrypted database data and Redis, then checks HTTP cookies, administrator persistence and MCP. |

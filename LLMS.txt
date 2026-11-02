@@ -184,6 +184,14 @@ scalar/UI fields only: `id`, `text`, `textarea`, `number`, `email`,
 `password`, `date`, `datetime`, `checkbox`, `switcher`, `select`, `image`,
 `file`, `json`, `color`, `slug`, `url`.
 
+An explicit `create_model_resource.panel` must match the registered local
+service panel (`LOCAL_PANEL_MISMATCH` otherwise). Local resource names are shared across panels. Regeneration of another panel's
+resource or an unassigned directory fails with `GENERATION_FAILED`. Native
+`MoonShineUser`/`MoonShineUserRole` names and aliases are reserved. Removal
+deletes only local resources explicitly owned by the selected panel. Local
+`register_service` and `remove_service` reject `admin-hub` aliases to protect
+the system hub layout.
+
 Generated local resources live under `App\MoonShine\Resources` by default and
 extend MoonShine's native model-resource stack. A single visible local service
 hides the panel/service dropdown; multiple local panels, or any REST service,

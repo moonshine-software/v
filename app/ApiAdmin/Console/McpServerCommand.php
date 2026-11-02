@@ -492,6 +492,12 @@ Canonical local monolith flow:
      Local field types are scalar/UI types only: id, text, textarea,
      number, email, password, date, datetime, checkbox, switcher, select,
      image, file, json, color, slug, url.
+     Explicit panel must match the service panel (LOCAL_PANEL_MISMATCH otherwise).
+     Local names share a namespace: another panel's resource or an unassigned
+     directory cannot be overwritten (GENERATION_FAILED). MoonShineUser and
+     MoonShineUserRole names/aliases are reserved. Local removal deletes only
+     resources explicitly owned by that panel. Local register_service and
+     remove_service reject admin-hub aliases to preserve the system layout.
 
 REST and local tools are intentionally separate. create_model_resource
 refuses REST services with LOCAL_SERVICE_REQUIRED. Missing or non-Eloquent

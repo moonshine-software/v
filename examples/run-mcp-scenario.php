@@ -51,7 +51,7 @@ $steps = [
                 ['column' => 'id', 'type' => 'id'],
                 ['column' => 'title', 'type' => 'text', 'methods' => ['sortable', 'required']],
                 ['column' => 'body', 'type' => 'textarea'],
-                ['column' => 'category_id', 'type' => 'belongs_to', 'endpoint' => '/categories'],
+                ['column' => 'category_id', 'type' => 'belongs_to', 'label' => 'Category', 'endpoint' => '/categories'],
                 [
                     'column' => 'comments',
                     'type' => 'has_many',

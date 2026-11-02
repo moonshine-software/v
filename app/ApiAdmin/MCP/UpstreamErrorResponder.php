@@ -34,7 +34,7 @@ final class UpstreamErrorResponder
         }
 
         // Exception messages can contain response bodies or credential-bearing URLs.
-        Log::error('[FIX:upstream-error] UpstreamErrorResponder::fromThrowable', [
+        Log::error('UpstreamErrorResponder::fromThrowable', [
             'exception' => $e::class,
             'status' => $e instanceof RequestException ? $e->response->status() : null,
         ]);

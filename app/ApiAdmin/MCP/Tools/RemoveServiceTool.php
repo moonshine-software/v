@@ -33,7 +33,7 @@ final class RemoveServiceTool implements ToolContract
     {
         return [
             'name' => 'remove_service',
-            'description' => 'Generation changes are serialized and rolled back on failure. Delete a registered service and all its generated artifacts (config entry, panel, layout, resources). Destructive — pass confirm=true.',
+            'description' => 'Generation changes are serialized and rolled back on failure. Delete a registered service and its generated artifacts (config entry, panel, layout, resources). Local resources must explicitly belong to its panel; platform resources and the system hub are protected. Destructive — pass confirm=true.',
             'inputSchema' => [
                 'type' => 'object',
                 'properties' => [
