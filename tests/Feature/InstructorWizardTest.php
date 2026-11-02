@@ -6,21 +6,26 @@ namespace Tests\Feature;
 
 use App\ApiAdmin\Instructor\InstructorSession;
 use App\ApiAdmin\Instructor\InstructorSessionRepository;
+use App\ApiAdmin\MCP\McpServer;
 use App\ApiAdmin\Tenancy\TenantContext;
 use App\ApiAdmin\Tenancy\TenantResolver;
 use App\Models\ApiAdminTenant;
 use App\MoonShine\ApiAdmin\Pages\InstructorPage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use MoonShine\Laravel\Models\MoonshineUser;
 use RuntimeException;
+use Tests\ApiAdmin\Concerns\UsesIsolatedProjectRoot;
 use Tests\TestCase;
 
 final class InstructorWizardTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesIsolatedProjectRoot;
 
     protected function setUp(): void
     {
@@ -32,6 +37,13 @@ final class InstructorWizardTest extends TestCase
             'password' => bcrypt('12345'),
             'name' => 'admin',
         ])->save();
+    }
+
+    protected function tearDown(): void
+    {
+        $this->removeIsolatedProjectRoot();
+
+        parent::tearDown();
     }
 
     public function test_instructor_requires_moonshine_authentication(): void
@@ -91,6 +103,67 @@ final class InstructorWizardTest extends TestCase
             ->post('/api-admin/instructor/confirm')
             ->assertRedirect('/api-admin/instructor')
             ->assertSessionHas('warning');
+    }
+
+    public function test_header_auth_survives_review_and_confirmation_without_exposing_credentials(): void
+    {
+        $this->useIsolatedProjectRoot(app());
+        config([
+            'api-admin.services' => [],
+            'api-admin.configs_path' => base_path('Configs'),
+            'api-admin.layouts_path' => base_path('Layouts'),
+            'api-admin.resources_path' => base_path('app/MoonShine/ApiAdmin/Resources'),
+            'api-admin.specs_path' => base_path('.ai-factory/specs'),
+            'api-admin.generated_services_path' => base_path('generated/services.php'),
+            'api-admin.generated_panels_path' => base_path('generated/panels.php'),
+        ]);
+        File::put(base_path('.env'), '');
+        File::put(config_path('moonshine.php'), '<?php return [];');
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.example.test/posts*' => static fn (Request $request) => Http::response(
+                ['data' => [['id' => 1, 'title' => 'Header-authenticated post']]],
+                $request->hasHeader('X-API-Key', 'probe-credential')
+                    || $request->hasHeader('X-API-Key', 'generation-credential') ? 200 : 401,
+            ),
+        ]);
+        $user = $this->user();
+        $this->actingAs($user, 'moonshine');
+        $service = 'header_'.bin2hex(random_bytes(5));
+
+        $this->post('/api-admin/instructor/start', [
+            'base_url' => 'https://api.example.test',
+            'service_name' => $service,
+            'resource_name' => 'post',
+            'endpoint_paths' => '/posts',
+            'auth_type' => 'header',
+            'auth_header' => 'X-API-Key',
+            'api_key' => 'probe-credential',
+        ])->assertRedirect('/api-admin/instructor');
+
+        $repository = app(InstructorSessionRepository::class);
+        $userId = $user->getKey();
+        $this->assertIsInt($userId);
+        $sessionId = 'moonshine-user-'.$userId;
+        $session = $repository->load($sessionId);
+        $this->assertInstanceOf(InstructorSession::class, $session);
+        $this->assertSame('X-API-Key', $session->input['auth_header']);
+        $this->assertSame('X-API-Key', data_get($session->proposal, 'service.auth_header'));
+        $this->assertSame('[redacted]', $session->input['api_key']);
+        $this->assertSame('[redacted]', data_get($session->publicSummary(), 'proposal.service.api_key'));
+        $this->assertStringNotContainsString('probe-credential', json_encode($session->toArray(), JSON_THROW_ON_ERROR));
+
+        $this->post('/api-admin/instructor/confirm', ['api_key' => 'generation-credential'])
+            ->assertRedirect('/api-admin/instructor');
+
+        $session = $repository->load($sessionId);
+        $this->assertInstanceOf(InstructorSession::class, $session);
+        $this->assertTrue(data_get($session->applyResult, 'success'), json_encode($session->applyResult, JSON_THROW_ON_ERROR));
+        $this->assertStringNotContainsString('generation-credential', json_encode($session->toArray(), JSON_THROW_ON_ERROR));
+        $result = new McpServer()->executeTool('fetch_resource_items', ['service' => $service, 'resource' => 'post']);
+        $this->assertTrue($result['success'], json_encode($result, JSON_THROW_ON_ERROR));
+        $this->assertSame('Header-authenticated post', data_get($result, 'data.items.0.title'));
+        Http::assertSent(static fn (Request $request): bool => $request->hasHeader('X-API-Key', 'generation-credential'));
     }
 
     public function test_hosted_instructor_denies_nonmember_before_upstream_probe(): void

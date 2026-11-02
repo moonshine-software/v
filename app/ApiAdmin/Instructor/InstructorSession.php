@@ -153,7 +153,6 @@ final readonly class InstructorSession
     {
         $secretKeys = [
             'api_key',
-            'auth_header',
             'oauth_client_secret',
             'oauth_password',
             'oauth_refresh_token',
