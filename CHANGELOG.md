@@ -19,6 +19,10 @@ First public version.
 
 ### Fixed
 
+- Keep upstream response secrets out of async relation search error logs.
+- Forward relation dropdown searches to the target API before pagination and restore saved labels by ID, preserving server-defined scopes.
+- Detect Spring Boot pagination consistently in MCP probes and browser onboarding.
+- Isolate per-page generator tests so simultaneous runs do not share files or specs.
 - Preserve the system hub and native administrator resources during code generation and removal.
 - Reject local resource overwrites across panels and remove Eloquent files only for their owning panel.
 - Group numeric aggregate keys without a sorting error.

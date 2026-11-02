@@ -117,7 +117,7 @@ $steps = [
             ['column' => 'id', 'type' => 'id'],
             ['column' => 'title', 'type' => 'text', 'methods' => ['sortable', 'required']],
             ['column' => 'body', 'type' => 'textarea'],
-            ['column' => 'category_id', 'type' => 'belongs_to', 'endpoint' => '/categories'],
+            ['column' => 'category_id', 'type' => 'belongs_to', 'endpoint' => '/owners', 'target_service' => 'links'],
             [
                 'column' => 'comments',
                 'type' => 'has_many',

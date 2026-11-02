@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\ApiAdmin\Instructor\InstructorDiscoveryService;
+use App\ApiAdmin\Instructor\InstructorProposalBuilder;
 use App\ApiAdmin\MCP\ResourceRequestContext;
 use App\ApiAdmin\MCP\Tools\ProbeEndpointTool;
 use App\ApiAdmin\MCP\Tools\RegisterServiceTool;
@@ -221,6 +222,55 @@ final class RestApiCompatibilityTest extends TestCase
             $this->assertSame('previous', $mapping['prev_page_url_key']);
             $this->assertSame('page_size', $mapping['per_page_param_name']);
         }
+    }
+
+    /** @return iterable<string, array{int, bool}> */
+    public static function springPages(): iterable
+    {
+        yield 'first page' => [0, false];
+        yield 'middle page' => [1, false];
+        yield 'last page' => [2, false];
+        yield 'empty list' => [0, true];
+    }
+
+    #[DataProvider('springPages')]
+    public function test_spring_discovery_preserves_pagination_through_the_browser_proposal(int $number, bool $empty): void
+    {
+        Http::fake(['*' => Http::response([
+            'content' => $empty ? [] : [['id' => 7]], 'totalElements' => $empty ? 0 : 60,
+            'size' => 20, 'number' => $number, 'totalPages' => $empty ? 0 : 3,
+        ])]);
+        app()->instance('api-admin.tenant.local.service.compatibility', $this->service(new ResponseMapping));
+        $probe = new ProbeEndpointTool()->execute(['service' => 'compatibility', 'path' => '/items']);
+        $discovery = new InstructorDiscoveryService()->discover('https://compatibility.test', ['/items']);
+        $proposal = new InstructorProposalBuilder()->build($discovery, ['service_name' => 'compatibility']);
+        $expected = [
+            'data_key' => 'content', 'total_key' => 'totalElements', 'per_page_key' => 'size',
+            'current_page_key' => 'number', 'last_page_key' => 'totalPages',
+            'per_page_param_name' => 'size', 'zero_based_pages' => true, 'primary_key' => 'id',
+        ];
+
+        $this->assertTrue($probe['success']);
+        $this->assertTrue($discovery['success']);
+        $this->assertSame($expected, $probe['guessed_mapping']);
+        $this->assertSame($expected, $discovery['probes'][0]['guessed_mapping']);
+        $this->assertSame($empty ? [] : ['id'], $probe['detected_columns']);
+        $this->assertSame($empty ? [] : ['id'], $discovery['probes'][0]['detected_columns']);
+        $proposedService = $proposal['proposal']['service'];
+        $this->assertIsArray($proposedService);
+        $this->assertSame($expected, $proposedService['response_mapping']);
+        $service = ServiceConfig::fromArray([
+            'name' => 'compatibility', 'base_url' => 'https://compatibility.test',
+            'response_mapping' => $proposedService['response_mapping'],
+        ]);
+        $mapping = ServiceConfig::fromArray($service->toArray())->responseMapping;
+        $paginator = ResourceRequestContext::seed($this->resource($mapping), ['page' => $number + 1, 'per_page' => 20], static fn ($resource) => $resource->getItems());
+
+        $this->assertInstanceOf(PaginatorContract::class, $paginator);
+        $this->assertSame($number + 1, $paginator->getCurrentPage());
+        $this->assertSame($empty ? 0 : 60, $paginator->getTotal());
+        Http::assertSent(static fn (Request $request): bool => ($request->data()['page'] ?? null) === $number
+            && ($request->data()['size'] ?? null) === 20 && ! isset($request['per_page']));
     }
 
     private function service(ResponseMapping $mapping): ServiceConfig

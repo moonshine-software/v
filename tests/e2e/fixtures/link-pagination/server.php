@@ -14,6 +14,22 @@ if (($_SERVER['HTTP_AUTHORIZATION'] ?? '') !== 'Bearer link-pagination-token') {
     echo json_encode(['message' => 'Server credentials required']);
     exit;
 }
+if (is_string($path) && preg_match('#^/owners(?:/(\d+))?$#', $path, $match) === 1) {
+    $names = [1 => 'Technology', 2 => 'Science', 3 => 'Design'];
+    $owners = array_map(static fn (int $id): array => [
+        'id' => $id, 'name' => $names[$id] ?? 'Related category '.$id,
+    ], range(1, 26));
+    if (isset($match[1])) {
+        $owner = $owners[(int) $match[1] - 1] ?? null;
+        http_response_code($owner === null ? 404 : 200);
+        echo json_encode(['data' => $owner]);
+    } else {
+        $search = is_string($_GET['search'] ?? null) ? $_GET['search'] : '';
+        $owners = array_values(array_filter($owners, static fn (array $owner): bool => str_contains($owner['name'], $search)));
+        echo json_encode(['data' => array_slice($owners, 0, 25), 'total' => count($owners), 'per_page' => 25, 'current_page' => 1, 'last_page' => (int) ceil(count($owners) / 25)]);
+    }
+    exit;
+}
 if (! in_array($path, ['/simple', '/numbered'], true)) {
     http_response_code(404);
     exit;

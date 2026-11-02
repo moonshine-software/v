@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace Tests\ApiAdmin\Unit\Generator;
 
 use App\ApiAdmin\MCP\Generator\ResourceGenerator;
-use App\ApiAdmin\Providers\ApiAdminServiceProvider;
 use Illuminate\Support\Facades\File;
-use MoonShine\Laravel\Providers\MoonShineServiceProvider;
-use MoonShine\MultiPanels\Providers\MultiPanelServiceProvider;
 use Orchestra\Testbench\TestCase;
 
 /**
@@ -20,20 +17,12 @@ use Orchestra\Testbench\TestCase;
  */
 final class PerPageFieldsTest extends TestCase
 {
-    protected function getPackageProviders($app): array
-    {
-        return [
-            MoonShineServiceProvider::class,
-            MultiPanelServiceProvider::class,
-            ApiAdminServiceProvider::class,
-        ];
-    }
-
     protected function setUp(): void
     {
         parent::setUp();
 
-        config(['api-admin.resources_path' => sys_get_temp_dir().'/moonshine-per-page-fields']);
+        $path = sys_get_temp_dir().'/moonshine-per-page-fields-'.bin2hex(random_bytes(8));
+        config(['api-admin.resources_path' => $path, 'api-admin.specs_path' => $path.'/.specs']);
     }
 
     protected function tearDown(): void

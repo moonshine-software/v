@@ -795,7 +795,8 @@ Terminology (use these exact keys in tool arguments):
       sort_param_name: default "sort". Override for APIs expecting
         "order_by" / "ordering".
       search_param_name: default "search". Override for APIs expecting
-        "q" or "query".
+        "q" or "query". BelongsTo searches use the related service's same
+        parameter before pagination; server-defined endpoint_query wins.
       detail_data_key: dot-path inside the single-item response envelope
         where the item body lives (default empty = use data_key/unwrap
         heuristic). Set when single-item has a different / deeper

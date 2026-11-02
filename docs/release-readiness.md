@@ -24,9 +24,9 @@ Before tagging a release:
 | Check | Result |
 |---|---|
 | `XDEBUG_MODE=off composer ai:validate` | Exit 0: Pint, Rector, production audit, PHPStan level max, PHPUnit |
-| PHPUnit | **967 passed, 5051 assertions**, including real API compatibility, HTTP authorization, secret-free save/error diagnostics and hosted tenant/token provisioning commands |
-| Chrome E2E (`npm run test:e2e`) | **49 passed**, including hosted onboarding, Django navigation, custom field tools and authenticated Link-header pagination with filters/search/sort |
-| Concurrent generator/field-tool tests | Two simultaneous processes pass, sharing the same checkout and temporary-directory base |
+| PHPUnit | **984 passed, 5147 assertions**, including API compatibility, relation search/selection, secret-free diagnostics, HTTP authorization and hosted tenant/token provisioning commands |
+| Chrome E2E (`npm run test:e2e`) | **50 passed**, including saved relation search beyond page one, hosted onboarding, Django navigation, custom field tools and authenticated Link-header pagination with filters/search/sort |
+| Concurrent generator/field-tool tests | Two simultaneous processes pass, including per-page field generation, sharing the same checkout and temporary-directory base |
 | Installer and E2E setup tests (`npm run test:installer`) | **23 passed**: 16 installer and 7 E2E lifecycle checks |
 | Fresh Docker installation (`npm run test:installer:docker`) | Passed: secret exclusion, administrator login, MCP discovery, backup/damage/restore, HTTP cookies, resume and restart persistence |
 | Production smoke (`docker/smoke.sh`) | Passed: PostgreSQL, Redis, queue, generated state, custom field tools, container recreation, backup/restore, backend outage |
@@ -40,6 +40,9 @@ Hosted MCP was also exercised with the official MCP SDK: handshake, ping, `tools
 
 | Finding | Resolution and evidence |
 |---|---|
+| Async relation errors copied upstream secrets into logs | Search and BelongsTo option diagnostics retain the exception class and HTTP status. Feature tests cover HTTP response secrets, connection-error URLs and failed catalog fallbacks. |
+| Relation searches and saved labels were limited to the first API page | Typed text uses the target service's configured search parameter, preserving server-owned scopes. Saved selections use the detail strategy with exact ID checks; only 404 permits list fallback. Feature tests cover custom search keys, scope collisions, mismatches and 401/403; Chrome searches, saves and reopens record 26. |
+| Spring discovery lost pagination metadata | MCP probes and browser onboarding emit the same complete mapping, including `size` and zero-based pages. Feature tests cover first, middle, last and empty responses through the browser proposal and runtime paginator; empty lists do not infer envelope keys as fields. |
 | Generation could overwrite system or another panel's files | Reserved hub/native names and platform panels are protected. Local service panels are unique; explicit resource panels must match their service. Feature tests verify unchanged files on rejection, same-owner regeneration and safe ownership parsing of PHP declarations. |
 | Local removal left Eloquent resources behind | Removal selects only explicitly owned local resources, preserves native/unassigned/foreign files, rejects ambiguous legacy panels and restores files/registries after an outer failure. |
 | Numeric aggregate groups crashed sorting | Group keys remain strings after PHP normalizes array keys. An MCP feature test covers count/sum over integer and numeric-string groups, including zero and negative values. |

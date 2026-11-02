@@ -1,4 +1,4 @@
-import { blogApi, createPost, expect, POSTS, signInToHub, test } from '../support.mjs';
+import { blogApi, createPost, expect, POSTS, readPost, signInToHub, submitMainForm, test } from '../support.mjs';
 
 const HOSTILE = '<img src=x onerror="window.__xss=true">';
 
@@ -13,6 +13,22 @@ test('the detail page resolves every relation', async ({ page }) => {
     await expect(main).toContainText('Science');
     await expect(main).toContainText('John Doe');
     await expect(main).toContainText('PHP, Laravel');
+});
+
+test('a belongs-to search finds a record beyond the first API page and saves the selection', async ({ page, request }) => {
+    const post = await createPost(request, { title: 'E2E remote relation search' });
+    await page.goto(`${POSTS}/post-form-page/${post.id}`);
+
+    const select = page.locator('main form [name=category_id]').first();
+    const control = select.locator('..').locator('.ts-control input');
+    await control.fill('Related category 26');
+    await page.locator('.ts-dropdown:visible [data-selectable]').filter({ hasText: 'Related category 26' }).click();
+    await expect(select).toHaveValue('26');
+    await submitMainForm(page);
+
+    await expect.poll(async () => (await readPost(request, post.id)).category_id).toBe(26);
+    await page.goto(`${POSTS}/post-form-page/${post.id}`);
+    await expect(page.locator('main form .ts-control').first()).toContainText('Related category 26');
 });
 
 test('a has-many record is created from the parent form', async ({ page, request }) => {

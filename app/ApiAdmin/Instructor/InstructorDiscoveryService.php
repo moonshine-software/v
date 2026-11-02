@@ -189,7 +189,8 @@ final readonly class InstructorDiscoveryService
         }
 
         [$format, $mapping] = $this->guessMapping($body);
-        $columns = $this->detectColumns($body, is_array($mapping) ? ($mapping['data_key'] ?? null) : null);
+        $dataKey = is_string($mapping['data_key'] ?? null) ? $mapping['data_key'] : null;
+        $columns = $this->detectColumns($body, $dataKey);
 
         return [
             'success' => $response->successful(),
@@ -199,7 +200,7 @@ final readonly class InstructorDiscoveryService
             'guessed_format' => $format,
             'guessed_mapping' => $mapping,
             'detected_columns' => $columns,
-            'sample_json' => $this->sample($body, is_array($mapping) ? ($mapping['data_key'] ?? null) : null),
+            'sample_json' => $this->sample($body, $dataKey),
             'hints' => $this->hints($status, $columns, $format),
         ];
     }
@@ -207,7 +208,7 @@ final readonly class InstructorDiscoveryService
     /**
      * @param array<mixed> $body
      *
-     * @return array{0: string|null, 1: array<string, string>|null}
+     * @return array{0: string|null, 1: array<string, bool|string>|null}
      */
     private function guessMapping(array $body): array
     {
@@ -241,6 +242,20 @@ final readonly class InstructorDiscoveryService
                 'current_page_key' => 'current_page',
                 'last_page_key' => 'last_page',
                 'primary_key' => $this->guessPrimaryKey($items[0] ?? null),
+            ]];
+        }
+
+        if (is_array($body['content'] ?? null)
+            && $this->hasAll($body, ['totalElements', 'size', 'number', 'totalPages'])) {
+            return ['custom', [
+                'data_key' => 'content',
+                'total_key' => 'totalElements',
+                'per_page_key' => 'size',
+                'current_page_key' => 'number',
+                'last_page_key' => 'totalPages',
+                'per_page_param_name' => 'size',
+                'zero_based_pages' => true,
+                'primary_key' => $this->guessPrimaryKey($body['content'][0] ?? null),
             ]];
         }
 
@@ -288,6 +303,9 @@ final readonly class InstructorDiscoveryService
 
         if ($dataKey !== null && $dataKey !== '' && isset($body[$dataKey]) && is_array($body[$dataKey])) {
             $items = $body[$dataKey];
+            if ($items === []) {
+                return [];
+            }
             $candidate = is_array($items[0] ?? null) ? $items[0] : null;
         } elseif (array_is_list($body)) {
             $candidate = is_array($body[0] ?? null) ? $body[0] : null;

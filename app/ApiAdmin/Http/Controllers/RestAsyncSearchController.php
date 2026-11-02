@@ -9,6 +9,7 @@ use App\ApiAdmin\Http\AsyncSearchContext;
 use App\ApiAdmin\Http\RestEndpointAuthorization;
 use App\ApiAdmin\Providers\ApiAdminServiceProvider;
 use App\ApiAdmin\Resources\AbstractRestResource;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -60,6 +61,9 @@ class RestAsyncSearchController
         $query = $request->query('query', '');
         abort_unless(is_string($query), 422);
         $searchQuery = $query;
+        if ($searchQuery !== '') {
+            $endpointQuery += [$serviceConfig->responseMapping->searchParamName => $searchQuery];
+        }
 
         Log::debug('RestAsyncSearchController: searching', [
             'service' => $serviceName,
@@ -121,8 +125,8 @@ class RestAsyncSearchController
         } catch (Throwable $e) {
             Log::error('RestAsyncSearchController: failed', [
                 'service' => $serviceName,
-                'endpoint' => $endpoint,
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
             ]);
 
             return response()->json([]);

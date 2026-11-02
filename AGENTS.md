@@ -173,6 +173,12 @@ Full rationale and individual fix commands: `.ai-factory/RULES.md`.
 
 REST save diagnostics log payload keys only, never values. Instructor completion
 links use `TenantRoutes` so hosted panels retain the tenant prefix.
+Async relation searches use the target service's `search_param_name` and retain
+server-owned `endpoint_query` values. Error diagnostics use exception class and
+HTTP status, never upstream response bodies or exception messages. Feature coverage:
+`RestAsyncSearchTest`; Chrome covers selecting and saving a match beyond page one.
+Selected BelongsTo labels use the target service's detail strategy and field scope,
+require an exact ID match, and fall back to list options only after a 404.
 `make optimize` clears config/route caches and caches only views: caching
 configuration or routes prevents live panel discovery.
 
@@ -304,7 +310,9 @@ Pagination request mapping also accepts `per_page_param_name` (default `per_page
 and `zero_based_pages` (default `false`). Spring Boot uses `size` and `true`;
 UI/MCP pages remain one-based. The Django preset maps body `next`/`previous`
 navigation and uses a simple pager when last-page metadata is absent. Probe and
-Instructor discovery must emit the same mapping. List-strategy item reads require
+Instructor discovery must emit the same mapping, including Spring's `content`,
+`totalElements`, `size`, `number`, `totalPages` and `zero_based_pages: true`.
+List-strategy item reads require
 an exact primary-key match and must never fall back to the first row.
 
 Link-header pagination reads only positive `page` numbers from upstream URLs and

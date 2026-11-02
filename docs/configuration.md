@@ -214,6 +214,24 @@ snake_case keys, including `per_page_param_name: "size"` and
 `zero_based_pages: true`. UI/MCP page 1 sends `page=0&size=25` upstream; response
 `number: 0` becomes page 1 in the panel.
 
+Both `probe_endpoint` and browser onboarding detect this envelope and include
+all these mapping keys, including empty `content` lists. Existing services need
+to be re-registered with the reviewed mapping to update their generated config.
+
+### Relation searches
+
+BelongsTo dropdowns send the typed text to the related service using its
+`response_mapping.search_param_name` (`search` by default, or `q`/`query` when
+configured). The API must apply that search before pagination so records beyond
+its first page remain selectable. Server-defined `endpoint_query` restrictions
+are preserved; a search cannot replace them. Returned labels are also filtered
+locally and the dropdown returns at most 20 options.
+
+On edit, the selected label is loaded by ID using the related service's
+`detail_strategy` and the field's scope. Missing detail endpoints (404) fall back
+to the options list; authentication or authorization failures never trigger that
+fallback. The lookup must match the selected ID exactly.
+
 ## Link-header pagination
 
 Set `response_mapping.pagination_type` to `link_header` for APIs that return

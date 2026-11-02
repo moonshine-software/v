@@ -574,6 +574,8 @@ Envelope + pagination config:
   `"order_by"` / `"ordering"` — otherwise sort controls silently no-op.
 - `search_param_name: "search"` (default). Override for APIs that expect
   `"q"` or `"query"` — otherwise the search box silently no-ops.
+  BelongsTo dropdown searches use the related service's same parameter before
+  upstream pagination; server-defined endpoint_query restrictions take precedence.
 - `supports_sorting: false` — skip sort emission entirely for APIs that
   silently ignore sort params (prevents "sort UI doesn't work" bugs).
 - `detail_strategy: "endpoint"` (default, GET /resource/{id}) or `"list"`

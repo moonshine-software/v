@@ -6,9 +6,12 @@ namespace App\ApiAdmin\Fields;
 
 use App\ApiAdmin\Fields\Concerns\HasEndpointQuery;
 use App\ApiAdmin\Http\AsyncSearchContext;
+use App\ApiAdmin\Http\PathSegment;
 use App\ApiAdmin\Resources\AbstractRestResource;
 use App\ApiAdmin\Tenancy\TenantRoutes;
 use Closure;
+use GuzzleHttp\Psr7\Uri;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
 use MoonShine\Contracts\Core\TypeCasts\DataWrapperContract;
 use MoonShine\UI\Fields\Select;
@@ -303,8 +306,8 @@ class RestBelongsTo extends Select
         } catch (Throwable $e) {
             Log::error('RestBelongsTo::loadOptions — failed', [
                 'field' => $this->getColumn(),
-                'endpoint' => $endpoint,
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
             ]);
 
             return [];
@@ -322,14 +325,59 @@ class RestBelongsTo extends Select
             return [];
         }
 
-        $allOptions = $this->loadOptions();
         $key = (string) $currentValue;
-
-        if (isset($allOptions[$key])) {
-            return [$key => $allOptions[$key]];
+        $target = $this->resolveRelationTarget($this->dataWrapper);
+        $data = $this->getData();
+        $endpoint = $this->resolveRelationEndpoint(
+            $this->apiEndpoint,
+            [],
+            $this->relationEndpointContextFromItem($data instanceof DataWrapperContract ? $data : null),
+        );
+        if (! $target instanceof RestRelationTarget || $endpoint === null) {
+            return [$key => $key];
         }
 
-        return [$key => $key];
+        try {
+            $mapping = $target->serviceConfig()->responseMapping;
+            $query = $this->resolveEndpointQuery();
+            if ($mapping->detailStrategy === 'list') {
+                $query += [$mapping->detailListKeyParam ?: $this->valueKey => $key];
+            } else {
+                $uri = new Uri($endpoint);
+                $endpoint = (string) $uri->withPath(rtrim($uri->getPath(), '/').'/'.PathSegment::encode($key));
+            }
+            $response = $target->httpClient()->get($endpoint, $query);
+            if ($response->status() !== 404) {
+                $response->throw();
+                $json = $response->json();
+                $wrapper = $mapping->detailStrategy === 'list'
+                    ? $target->dataWrapper()
+                    : ($mapping->detailDataKey ?: $target->dataWrapper());
+                $items = data_get($json, $wrapper, $json);
+                $items = is_array($items) ? (array_is_list($items) ? $items : [$items]) : [];
+                foreach ($items as $item) {
+                    $id = data_get($item, $this->valueKey);
+                    $label = data_get($item, $this->labelKey);
+                    if (is_scalar($id) && (string) $id === $key && is_scalar($label)) {
+                        return [$key => (string) $label];
+                    }
+                }
+
+                return [$key => $key];
+            }
+        } catch (Throwable $e) {
+            Log::warning('RestBelongsTo: selected option lookup failed', [
+                'field' => $this->getColumn(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
+            ]);
+
+            return [$key => $key];
+        }
+
+        $allOptions = $this->loadOptions();
+
+        return [$key => $allOptions[$key] ?? $key];
     }
 
     /**

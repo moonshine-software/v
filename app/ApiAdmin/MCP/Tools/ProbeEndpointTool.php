@@ -41,7 +41,7 @@ final class ProbeEndpointTool implements ToolContract
     {
         return [
             'name' => 'probe_endpoint',
-            'description' => 'Probe an endpoint through a registered service and return status, sample JSON, headers, timings and a guessed response mapping (laravel/django/flat). Defaults to GET; set method=POST with body for POST-RPC list/search endpoints.',
+            'description' => 'Probe an endpoint through a registered service and return status, sample JSON, headers, timings and a guessed response mapping (Laravel, Django, flat, or custom including Spring Boot pagination). Defaults to GET; set method=POST with body for POST-RPC list/search endpoints.',
             'inputSchema' => [
                 'type' => 'object',
                 'properties' => [
@@ -170,8 +170,9 @@ final class ProbeEndpointTool implements ToolContract
                 $mapping['total_header'] = $this->detectTotalHeader($rawHeaders);
             }
         }
-        $sample = $this->buildSample($body, $mapping['data_key'] ?? null);
-        $detectedColumns = $this->detectColumns($body, $mapping['data_key'] ?? null);
+        $dataKey = is_string($mapping['data_key'] ?? null) ? $mapping['data_key'] : null;
+        $sample = $this->buildSample($body, $dataKey);
+        $detectedColumns = $this->detectColumns($body, $dataKey);
 
         $result = [
             'success' => true,
@@ -192,7 +193,7 @@ final class ProbeEndpointTool implements ToolContract
         // narrows the result — e.g. {"column":"status","value":"todo"}.
         $detect = $params['detect_filter_for'] ?? null;
         if (is_array($detect) && isset($detect['column'], $detect['value']) && $detect['column'] !== '') {
-            $baseline = $this->countItems($body, $mapping['data_key'] ?? null);
+            $baseline = $this->countItems($body, $dataKey);
 
             $filterResult = $this->probeFilterFormat(
                 $config,
@@ -200,7 +201,7 @@ final class ProbeEndpointTool implements ToolContract
                 $path,
                 $query,
                 $requestBody,
-                $mapping['data_key'] ?? null,
+                $dataKey,
                 $detect['column'],
                 $detect['value'],
                 $baseline,
@@ -367,7 +368,6 @@ final class ProbeEndpointTool implements ToolContract
         }
 
         $data = $dataKey !== null && $dataKey !== '' ? data_get($body, $dataKey) : null;
-
         if (is_array($data)) {
             return count($data);
         }
@@ -393,6 +393,9 @@ final class ProbeEndpointTool implements ToolContract
         $candidate = null;
 
         $data = $dataKey !== null && $dataKey !== '' ? data_get($body, $dataKey) : null;
+        if ($data === []) {
+            return [];
+        }
 
         if (is_array($data)) {
             $items = $data;
@@ -572,7 +575,7 @@ final class ProbeEndpointTool implements ToolContract
      *
      * @param array<mixed> $body
      *
-     * @return array{0: string|null, 1: array<string, string>|null}
+     * @return array{0: string|null, 1: array<string, bool|string>|null}
      */
     private function guessMapping(array $body): array
     {
@@ -623,6 +626,20 @@ final class ProbeEndpointTool implements ToolContract
                     'primary_key' => $this->guessPrimaryKey(is_array($items) ? ($items[0] ?? null) : null),
                 ],
             ];
+        }
+
+        if (is_array($body['content'] ?? null)
+            && $this->hasAll($body, ['totalElements', 'size', 'number', 'totalPages'])) {
+            return ['custom', [
+                'data_key' => 'content',
+                'total_key' => 'totalElements',
+                'per_page_key' => 'size',
+                'current_page_key' => 'number',
+                'last_page_key' => 'totalPages',
+                'per_page_param_name' => 'size',
+                'zero_based_pages' => true,
+                'primary_key' => $this->guessPrimaryKey($body['content'][0] ?? null),
+            ]];
         }
 
         // Plural-wrapped list: one top-level key whose value is a list
