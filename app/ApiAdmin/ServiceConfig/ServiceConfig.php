@@ -335,18 +335,6 @@ final readonly class ServiceConfig
     }
 
     /**
-     * Fetch (and cache) an OAuth 2.0 access token via the client-credentials grant.
-     *
-     * Thin proxy retained for back-compat with existing call sites
-     * (ServiceConfigTest, authHeaders match arm). New code should call
-     * `oauthTokenStore()->getAccessToken($grant)` directly.
-     */
-    public function fetchOAuthAccessToken(): string
-    {
-        return $this->oauthTokenStore()->getAccessToken(OAuth2TokenStore::GRANT_CLIENT_CREDENTIALS);
-    }
-
-    /**
      * Force a fresh token fetch on next call. No-op for non-oauth auth types.
      */
     public function invalidateOAuthToken(): void

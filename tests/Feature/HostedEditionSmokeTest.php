@@ -19,9 +19,12 @@ use Illuminate\Support\Facades\Schema;
 use MoonShine\Laravel\Providers\MoonShineServiceProvider;
 use MoonShine\MultiPanels\Providers\MultiPanelServiceProvider;
 use Orchestra\Testbench\TestCase;
+use Tests\ApiAdmin\Concerns\UsesIsolatedProjectRoot;
 
 final class HostedEditionSmokeTest extends TestCase
 {
+    use UsesIsolatedProjectRoot;
+
     protected function getPackageProviders($app): array
     {
         return [
@@ -33,16 +36,18 @@ final class HostedEditionSmokeTest extends TestCase
 
     protected function defineEnvironment($app): void
     {
+        $this->useIsolatedProjectRoot($app);
         $app['config']->set('app.key', 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=');
         $app['config']->set('api-admin.hosted.mode', 'hosted');
         $app['config']->set('api-admin.hosted.mcp.enabled', true);
         $app['config']->set('api-admin.hosted.route_prefix', 't/{tenant}');
         $app['config']->set('api-admin.http.allow_private_addresses', true);
-        $app['config']->set('api-admin.configs_path', $this->tmpRoot().'/Configs');
-        $app['config']->set('api-admin.layouts_path', $this->tmpRoot().'/Layouts');
-        $app['config']->set('api-admin.generated_services_path', $this->tmpRoot().'/Generated/services.php');
-        $app['config']->set('api-admin.generated_panels_path', $this->tmpRoot().'/Generated/panels.php');
-        $app['config']->set('api-admin.resources_path', dirname(__DIR__, 2).'/app/MoonShine/ApiAdmin/Resources');
+        $app['config']->set('api-admin.configs_path', $this->isolatedRoot.'/Configs');
+        $app['config']->set('api-admin.layouts_path', $this->isolatedRoot.'/Layouts');
+        $app['config']->set('api-admin.generated_services_path', $this->isolatedRoot.'/Generated/services.php');
+        $app['config']->set('api-admin.generated_panels_path', $this->isolatedRoot.'/Generated/panels.php');
+        $app['config']->set('api-admin.resources_path', $this->isolatedRoot.'/app/MoonShine/ApiAdmin/Resources');
+        $app['config']->set('api-admin.specs_path', $this->isolatedRoot.'/.ai-factory/specs');
         $app['config']->set('api-admin.services', [
             'blog' => [
                 'name' => 'blog',
@@ -66,10 +71,10 @@ final class HostedEditionSmokeTest extends TestCase
     {
         parent::setUp();
 
-        File::deleteDirectory($this->tmpRoot());
-        File::ensureDirectoryExists($this->tmpRoot().'/Configs');
-        File::ensureDirectoryExists($this->tmpRoot().'/Layouts');
-        File::ensureDirectoryExists($this->tmpRoot().'/Generated');
+        foreach (['Configs', 'Layouts', 'Generated'] as $directory) {
+            File::ensureDirectoryExists($this->isolatedRoot.'/'.$directory);
+        }
+
         File::put(config_path('api-admin.php'), "<?php\n\ndeclare(strict_types=1);\n\nreturn ".var_export(['services' => []], true).";\n");
         File::put(config_path('moonshine.php'), "<?php\n\nreturn [\n    'use_routes' => true,\n    'panels' => [],\n];\n");
 
@@ -110,10 +115,7 @@ final class HostedEditionSmokeTest extends TestCase
         Schema::dropIfExists('api_admin_tenant_secrets');
         Schema::dropIfExists('api_admin_mcp_tokens');
         Schema::dropIfExists('api_admin_tenants');
-        File::deleteDirectory($this->tmpRoot());
-        File::deleteDirectory(dirname(__DIR__, 2).'/app/MoonShine/ApiAdmin/Resources/Tenants/Acme/SmokeCatalog');
-        @unlink(config_path('api-admin.php'));
-        @unlink(config_path('moonshine.php'));
+        $this->removeIsolatedProjectRoot();
 
         parent::tearDown();
     }
@@ -182,11 +184,11 @@ final class HostedEditionSmokeTest extends TestCase
         $registerResult = $this->toolPayload($register->json('result.content.0.text'));
         $this->assertSame('smoke-catalog', $registerResult['service']);
         $this->assertSame('smoke-catalog-admin', $registerResult['panel']);
-        $this->assertFileExists($this->tmpRoot().'/Configs/Tenants/Acme/SmokeCatalogConfig.php');
-        $this->assertFileExists($this->tmpRoot().'/Generated/services.php');
+        $this->assertFileExists($this->isolatedRoot.'/Configs/Tenants/Acme/SmokeCatalogConfig.php');
+        $this->assertFileExists($this->isolatedRoot.'/Generated/services.php');
         $this->assertStringContainsString(
             "'tenant_id' => '1'",
-            File::get($this->tmpRoot().'/Generated/services.php'),
+            File::get($this->isolatedRoot.'/Generated/services.php'),
         );
 
         $createResource = $this
@@ -217,7 +219,8 @@ final class HostedEditionSmokeTest extends TestCase
         $validation = $resourceResult['validation'] ?? null;
         $this->assertIsArray($validation);
         $this->assertTrue($validation['ok']);
-        $this->assertFileExists(dirname(__DIR__, 2).'/app/MoonShine/ApiAdmin/Resources/Tenants/Acme/SmokeCatalog/Post/PostResource.php');
+        $this->assertFileExists($this->isolatedRoot.'/app/MoonShine/ApiAdmin/Resources/Tenants/Acme/SmokeCatalog/Post/PostResource.php');
+        $this->assertDirectoryDoesNotExist(dirname(__DIR__, 2).'/app/MoonShine/ApiAdmin/Resources/Tenants/Acme/SmokeCatalog');
 
         $resources = $this
             ->withToken('acme-token')
@@ -237,8 +240,8 @@ final class HostedEditionSmokeTest extends TestCase
         $this->assertIsString($resourcesText);
         $this->assertStringContainsString('"name":"post"', $resourcesText);
 
-        $this->assertFileExists($this->tmpRoot().'/Generated/panels.php');
-        $moonshineConfig = File::get($this->tmpRoot().'/Generated/panels.php');
+        $this->assertFileExists($this->isolatedRoot.'/Generated/panels.php');
+        $moonshineConfig = File::get($this->isolatedRoot.'/Generated/panels.php');
         $this->assertStringContainsString("'smoke-catalog-admin'", $moonshineConfig);
         $this->assertStringContainsString("'prefix' => 't/{tenant}/smoke-catalog-admin'", $moonshineConfig);
 
@@ -410,10 +413,5 @@ final class HostedEditionSmokeTest extends TestCase
 
         /** @var array<string, mixed> $decoded */
         return $decoded;
-    }
-
-    private function tmpRoot(): string
-    {
-        return sys_get_temp_dir().'/moonshine-hosted-smoke-test';
     }
 }

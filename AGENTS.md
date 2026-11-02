@@ -167,7 +167,11 @@ sessions still require upstream validation, and actual expired state is rejected
 
 Generator tests must use independent temporary resource/spec roots. Test service
 identifiers need random suffixes; the timestamp portion of `uniqid()` is shared
-by concurrent processes and is not a unique identifier.
+by concurrent processes and is not a unique identifier. `tests/bootstrap.php`
+gives each PHPUnit process a private Testbench skeleton and spec root
+(restored before every test by `Tests\PrivateTestbenchSkeleton`). Tests that
+generate classes or edit config/.env use `UsesIsolatedProjectRoot`; never write
+into the checkout's `app/` or `.ai-factory/specs`.
 
 Full rationale and individual fix commands: `.ai-factory/RULES.md`.
 

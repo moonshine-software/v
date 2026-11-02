@@ -73,14 +73,14 @@ iterations on a confusing error.
   from the passed spec — omitting `fields` wipes them, omitting
   `filters` wipes them, etc. To preserve what you have: call
   `get_resource(service, name)` first, merge your change into the
-  returned spec, pass the merged spec. Resources created before
-  `get_resource` landed return `SPEC_MISSING` — reconstruct from the
+  returned spec, pass the merged spec. A resource without a spec
+  sidecar returns `SPEC_MISSING` — reconstruct from the
   generated `app/MoonShine/ApiAdmin/Resources/<Service>/<Name>/Pages/
   *Page.php` files (read-only) or call `update_resource` once with
   the full current spec to seed the sidecar.
 - **Prefer the partial-delta tools over `update_resource`** for
   single-field mutations — they don't require you to remember the
-  full spec. Available since 2026-04-25:
+  full spec:
   * `add_field({service, resource, field, position?, pages?})` —
     insert one column. Position via `before:col` / `after:col` /
     `index:int` (mutually exclusive). `pages` (subset of
@@ -112,12 +112,11 @@ iterations on a confusing error.
   as absent. Delta tools (`add_field`, `remove_field`,
   `rename_field`) keep all 4 arrays internally consistent so a
   new column doesn't silently disappear on the override-using page.
-- **`register_service` PRESERVES `api_key` when omitted** (since
-  2026-04-21). Re-registering to tweak `response_mapping` /
-  `filter_param_name` / `detail_data_key` without restating the
-  token keeps the stored token. An EXPLICIT empty-string clears it
-  (use for `auth_type: "none"`). Older behavior silently nulled the
-  token on every call and produced a cascade of 401s.
+- **`register_service` PRESERVES `api_key` when omitted.**
+  Re-registering to tweak `response_mapping` / `filter_param_name` /
+  `detail_data_key` without restating the token keeps the stored
+  token. An EXPLICIT empty-string clears it (use for
+  `auth_type: "none"`).
 - **Laravel APIs that embed relations** (`GET /posts/1` →
   `{"resource": {"data": {..., "client": {"id":4,"name":"Acme"}}}}`)
   need two layers of config: set `response_mapping.detail_data_key:
@@ -387,8 +386,8 @@ against it at runtime. No custom PHP required.
   - `"query"` — appends `?<auth_header>=<api_key>` to every request URL. Rare — only for APIs that want the key in the query string.
   - `"basic"` — HTTP Basic auth. `api_key` is `"user:password"` (colon-delimited); the tool base64-encodes it and sends `Authorization: Basic <…>`.
   - `"oauth2_cc"` — OAuth 2.0 client-credentials grant with auto token refresh. Requires `token_url`, `oauth_client_id`, `oauth_client_secret`; optional `oauth_scope`. The token is fetched on first use, cached (`expires_in − 30s`), and sent as `Authorization: Bearer <access_token>`. `api_key` is unused.
-  - `"oauth2_password"` — OAuth 2.0 Resource Owner Password Credentials grant. Static mode adds `oauth_username` + `oauth_password` (sensitive — stored in `.env`) on top of `oauth_cc` requirements. Delegated admin-login mode uses `admin_login: true`: do not register `oauth_username` / `oauth_password`; the human enters credentials on `/<panel>/login`, MoonShine posts them to `token_url`, and only the resulting access/refresh token state is kept in the Laravel session.
-  - `"oauth2_refresh_token"` — exchange a long-lived refresh token for access tokens. Seed via `oauth_refresh_token` (sensitive — stored in `.env`). Rotations are stored encrypted in the database and survive cache clearing. Refreshes are serialized across workers with a shared cache lock.
+  - `"oauth2_password"` — OAuth 2.0 Resource Owner Password Credentials grant. Static mode adds `oauth_username` + `oauth_password` (the password is sensitive — stored in `.env` locally, `TenantSecretStore` in hosted mode) on top of `oauth_cc` requirements. Delegated admin-login mode uses `admin_login: true`: do not register `oauth_username` / `oauth_password`; the human enters credentials on `/<panel>/login`, MoonShine posts them to `token_url`, and only the resulting access/refresh token state is kept in the Laravel session.
+  - `"oauth2_refresh_token"` — exchange a long-lived refresh token for access tokens. Seed via `oauth_refresh_token` (sensitive — stored in `.env` locally, `TenantSecretStore` in hosted mode). Rotations are stored encrypted in the database and survive cache clearing. Refreshes are serialized across workers with a shared cache lock.
   - `"session"` — cookie + CSRF session auth (Laravel Sanctum SPA, Django session, Rails). Static mode requires `session_login_endpoint`, `session_username`, `session_password` (sensitive). Delegated admin-login mode uses `admin_login: true`: register `session_login_endpoint` + csrf settings but omit `session_username` / `session_password`; the human credentials are sent to the upstream login endpoint from `/<panel>/login`, and only cookie/CSRF state is kept in the Laravel session. Optional `csrf_bootstrap_path` (e.g. `/sanctum/csrf-cookie`) is GET-ed first to seed Sanctum's XSRF cookie.
   - `"none"` — no auth headers. Use for fully open APIs or when the backend authenticates via network-level ACLs.
 - `api_key` — the secret value for static schemes. For Sanctum bearer auth, this is a personal access token (you typically get it via `POST /api/api-tokens` on the upstream API using your user credentials, then copy `token` from the response).

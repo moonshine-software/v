@@ -15,14 +15,14 @@ jobs:
     env:
       XDEBUG_MODE: "off"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
           extensions: mbstring, intl, pdo_sqlite, pdo_pgsql, redis
           coverage: none
           tools: composer:v2
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.composer/cache
           key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}

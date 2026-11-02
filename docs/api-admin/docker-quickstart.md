@@ -32,6 +32,7 @@ development examples; keep your actual key private:
 ```env
 APP_KEY=base64:your-key-here
 APP_URL=http://localhost:8080
+APP_BIND=127.0.0.1
 APP_PORT=8080
 HTTPS_PORT=8443
 
@@ -71,7 +72,7 @@ The compose stack starts four runtime services:
 
 | Service | Purpose | Host access |
 |---------|---------|-------------|
-| `angie` | Angie reverse proxy for HTTP/static files/FastCGI | `http://localhost:8080` |
+| `angie` | Angie reverse proxy for HTTP/static files/FastCGI | `http://127.0.0.1:8080` (`APP_BIND` selects the host address) |
 | `api-admin-fpm` | PHP-FPM Laravel + MoonShine + MCP runtime | Docker network only |
 | `postgres` | Laravel metadata, tenants, tokens, sessions/jobs when configured | `127.0.0.1:5432` |
 | `redis` | Cache, sessions, queue backend | `127.0.0.1:6379` |
@@ -99,7 +100,7 @@ Then edit `docker/angie/conf.d/tls-acme.conf`:
 - replace `example.com` and `www.example.com` with your exact domain names
 - replace `admin@example.com` with the ACME account email
 - keep the Let's Encrypt staging directory for the first validation
-- set `APP_PORT=80`, `HTTPS_PORT=443`, and `APP_URL=https://your-domain`
+- set `APP_BIND=0.0.0.0`, `APP_PORT=80`, `HTTPS_PORT=443`, `APP_DEBUG=false` and `APP_URL=https://your-domain`
 
 After staging issuance works, switch the ACME directory in
 `tls-acme.conf` to `https://acme-v02.api.letsencrypt.org/directory`.

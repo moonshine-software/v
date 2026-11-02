@@ -1,6 +1,6 @@
 # MoonShine V
 
-![Technology-stack planets connected to the MoonShine V lunar satellite, with a V-shaped crater on the moon](docs/images/moonshine-v-space-banner.png)
+![Technology-stack planets connected to the MoonShine V lunar satellite, with a V-shaped crater on the moon](docs/images/moonshine-v-space-banner.webp)
 
 > Build an admin panel for your APIs with an AI agent — or onboard a service directly in the browser.
 

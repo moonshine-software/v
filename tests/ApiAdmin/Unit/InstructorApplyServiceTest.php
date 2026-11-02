@@ -7,27 +7,28 @@ namespace Tests\ApiAdmin\Unit;
 use App\ApiAdmin\Instructor\InstructorApplyService;
 use Illuminate\Support\Facades\File;
 use Orchestra\Testbench\TestCase;
+use Tests\ApiAdmin\Concerns\UsesIsolatedProjectRoot;
 
 final class InstructorApplyServiceTest extends TestCase
 {
-    private string $tmpRoot;
+    use UsesIsolatedProjectRoot;
 
     private string $resourcesRoot;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->useIsolatedProjectRoot(app());
 
-        $this->tmpRoot = sys_get_temp_dir().'/moonshine-test-instructor-'.uniqid('', true);
-        $this->resourcesRoot = dirname(__DIR__, 3).'/app/MoonShine/ApiAdmin/Resources';
-        File::ensureDirectoryExists($this->tmpRoot.'/Configs');
-        File::ensureDirectoryExists($this->tmpRoot.'/Layouts');
-        File::ensureDirectoryExists(config_path());
+        $this->resourcesRoot = base_path('app/MoonShine/ApiAdmin/Resources');
 
         config([
-            'api-admin.configs_path' => $this->tmpRoot.'/Configs',
-            'api-admin.layouts_path' => $this->tmpRoot.'/Layouts',
+            'api-admin.configs_path' => base_path('Configs'),
+            'api-admin.layouts_path' => base_path('Layouts'),
             'api-admin.resources_path' => $this->resourcesRoot,
+            'api-admin.specs_path' => base_path('.ai-factory/specs'),
+            'api-admin.generated_services_path' => base_path('generated/services.php'),
+            'api-admin.generated_panels_path' => base_path('generated/panels.php'),
             'api-admin.services' => [],
         ]);
 
@@ -37,20 +38,7 @@ final class InstructorApplyServiceTest extends TestCase
 
     protected function tearDown(): void
     {
-        if (File::isDirectory($this->tmpRoot)) {
-            File::deleteDirectory($this->tmpRoot);
-        }
-
-        if (File::isDirectory($this->resourcesRoot.'/VerifyInstructor')) {
-            File::deleteDirectory($this->resourcesRoot.'/VerifyInstructor');
-        }
-
-        if (File::isDirectory(base_path('.ai-factory/specs/verify_instructor'))) {
-            File::deleteDirectory(base_path('.ai-factory/specs/verify_instructor'));
-        }
-
-        @unlink(config_path('api-admin.php'));
-        @unlink(config_path('moonshine.php'));
+        $this->removeIsolatedProjectRoot();
 
         parent::tearDown();
     }
@@ -123,8 +111,8 @@ final class InstructorApplyServiceTest extends TestCase
 
         $resourcePath = $this->resourcesRoot.'/VerifyInstructor/User/UserResource.php';
 
-        $this->assertFileExists($this->tmpRoot.'/Configs/VerifyInstructorConfig.php');
-        $this->assertFileExists($this->tmpRoot.'/Layouts/VerifyInstructorLayout.php');
+        $this->assertFileExists(base_path().'/Configs/VerifyInstructorConfig.php');
+        $this->assertFileExists(base_path().'/Layouts/VerifyInstructorLayout.php');
         $this->assertFileExists($resourcePath);
         $this->assertFileExists($this->resourcesRoot.'/VerifyInstructor/User/Pages/UserIndexPage.php');
         $this->assertFileExists($this->resourcesRoot.'/VerifyInstructor/User/Pages/UserFormPage.php');
@@ -132,8 +120,9 @@ final class InstructorApplyServiceTest extends TestCase
 
         $files = $result['files'];
         $this->assertIsArray($files);
-        $this->assertContains($this->tmpRoot.'/Configs/VerifyInstructorConfig.php', $files);
-        $this->assertContains($this->tmpRoot.'/Layouts/VerifyInstructorLayout.php', $files);
+        $this->assertContains(base_path().'/Configs/VerifyInstructorConfig.php', $files);
+        $this->assertContains(base_path().'/Layouts/VerifyInstructorLayout.php', $files);
         $this->assertContains($resourcePath, $files);
+        $this->assertDirectoryDoesNotExist(dirname(__DIR__, 3).'/app/MoonShine/ApiAdmin/Resources/VerifyInstructor');
     }
 }

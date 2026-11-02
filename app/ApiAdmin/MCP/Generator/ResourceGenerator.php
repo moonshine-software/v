@@ -1652,8 +1652,8 @@ PHP;
      *
      * Returns [useStatement, attribute] as two strings. Both empty when
      * no icon was requested, which collapses the stub's dedicated lines
-     * into blank lines (harmless, and it keeps the slot indices stable
-     * for back-compat with older generator processes).
+     * into blank lines, which keeps the stub layout identical with and
+     * without an icon.
      *
      * @return array{0: string, 1: string}
      */

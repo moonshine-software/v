@@ -3,9 +3,6 @@
 
 set -e
 
-if [ -x /usr/local/bin/php ] && [ "$(/usr/local/bin/php -r 'echo PHP_VERSION_ID;')" -ge 80500 ]; then
-    PATH=/usr/local/bin:$PATH
-    export PATH
-fi
+. "$(dirname "$0")/require-php.sh"
 
 XDEBUG_MODE=off composer ai:validate --ansi

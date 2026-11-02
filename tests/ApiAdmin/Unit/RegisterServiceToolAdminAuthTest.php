@@ -8,14 +8,18 @@ use App\ApiAdmin\MCP\Tools\RegisterServiceTool;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Orchestra\Testbench\TestCase;
+use Tests\ApiAdmin\Concerns\UsesIsolatedProjectRoot;
 
 class RegisterServiceToolAdminAuthTest extends TestCase
 {
+    use UsesIsolatedProjectRoot;
+
     private string $tmpRoot;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->useIsolatedProjectRoot(app());
 
         config(['app.key' => 'base64:'.base64_encode(random_bytes(32))]);
         Cache::flush();
@@ -39,8 +43,7 @@ class RegisterServiceToolAdminAuthTest extends TestCase
     protected function tearDown(): void
     {
         File::deleteDirectory($this->tmpRoot);
-        @unlink(config_path('api-admin.php'));
-        @unlink(config_path('moonshine.php'));
+        $this->removeIsolatedProjectRoot();
         config([
             'api-admin.services' => [],
             'api-admin.generated_services_path' => storage_path('api-admin/generated/services.php'),

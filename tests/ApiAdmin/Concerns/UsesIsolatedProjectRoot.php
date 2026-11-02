@@ -9,9 +9,10 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Application;
 
 /**
- * Custom field/component generators edit config/api-admin.php and write under the
- * base path. Each test gets a private copy, so the checkout is never modified and
- * concurrent or interrupted runs cannot leave it broken.
+ * Generators and registration tools edit config files, .env and generated classes
+ * under the base path. Each test gets a private copy, so neither the checkout nor
+ * the shared Testbench skeleton is modified and concurrent or interrupted runs
+ * cannot break each other.
  */
 trait UsesIsolatedProjectRoot
 {
@@ -33,6 +34,7 @@ trait UsesIsolatedProjectRoot
             'storage/logs',
             'app/ApiAdmin/Fields/Custom',
             'app/ApiAdmin/Components/Custom',
+            'app/MoonShine/ApiAdmin/Resources',
             'resources/views/api-admin/components/custom',
             '.ai-factory/specs',
         ] as $directory) {
@@ -43,15 +45,16 @@ trait UsesIsolatedProjectRoot
         $files->copyDirectory($project.'/stubs', $this->isolatedRoot.'/stubs');
 
         $app->setBasePath($this->isolatedRoot);
+        $app->useConfigPath($this->isolatedRoot.'/config');
 
         // Composer maps App\ to the checkout; generated classes live in the private copy.
         $root = $this->isolatedRoot;
         $this->isolatedAutoloader = static function (string $class) use ($root): void {
-            if (preg_match('/^App\\\\ApiAdmin\\\\(Fields|Components)\\\\Custom\\\\(\w+)$/', $class, $match) !== 1) {
+            if (preg_match('/^App\\\\(ApiAdmin\\\\(?:Fields|Components)\\\\Custom|MoonShine\\\\ApiAdmin\\\\Resources)\\\\([\w\\\\]+)$/', $class, $match) !== 1) {
                 return;
             }
 
-            $file = "{$root}/app/ApiAdmin/{$match[1]}/Custom/{$match[2]}.php";
+            $file = $root.'/app/'.str_replace('\\', '/', $match[1].'\\'.$match[2]).'.php';
             if (is_file($file)) {
                 require_once $file;
             }

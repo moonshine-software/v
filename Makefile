@@ -177,9 +177,8 @@ reload: ## Hot-reload: dump autoload + clear caches (after code generation)
 
 ##@ Api-Admin (app/ApiAdmin)
 
-
 .PHONY: examples-up
-examples-up: ## Start example API servers (blog :9101, shop :9102)
+examples-up: ## Start example APIs (blog :9101, shop :9102, oauth :9201, session :9202)
 	bash examples/start-apis.sh
 
 .PHONY: examples-down

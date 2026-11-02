@@ -31,9 +31,8 @@ use RuntimeException;
  * (rotated tokens issued by the password grant are valid input for the
  * refresh_token grant on subsequent calls).
  *
- * The store is the single source of truth for OAuth tokens; ServiceConfig keeps
- * thin proxies (fetchOAuthAccessToken / invalidateOAuthToken) that delegate
- * here, so existing call sites do not need to know about grants.
+ * The store is the single source of truth for OAuth tokens; callers obtain it
+ * through ServiceConfig::oauthTokenStore() and pass the grant explicitly.
  */
 final readonly class OAuth2TokenStore
 {

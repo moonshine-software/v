@@ -112,7 +112,7 @@ final class RegisterServiceTool implements ToolContract
                     ],
                     'api_key' => [
                         'type' => 'string',
-                        'description' => 'Auth credential that goes into the outgoing request. For auth_type="bearer", this is the token sent as Authorization: Bearer <api_key> (works for Laravel Sanctum PATs, OAuth access tokens, GitHub PATs). For "header" and "query" types, this is the header/query value. Pass empty string (explicitly) when auth_type="none" to clear any previously-stored token. OMITTING the param when re-registering an existing service PRESERVES the currently-stored api_key — this lets the agent re-register just to tweak response_mapping / panel / filter_param_name without having to restate the secret every time. The tool also writes this token to the moonshine-v .env so subsequent runs/containers pick it up without hard-coding secrets in the generated config file.',
+                        'description' => 'Auth credential that goes into the outgoing request. For auth_type="bearer", this is the token sent as Authorization: Bearer <api_key> (works for Laravel Sanctum PATs, OAuth access tokens, GitHub PATs). For "header" and "query" types, this is the header/query value. Pass empty string (explicitly) when auth_type="none" to clear any previously-stored token. OMITTING the param when re-registering an existing service PRESERVES the currently-stored api_key — this lets the agent re-register just to tweak response_mapping / panel / filter_param_name without having to restate the secret every time. The token is never written into the generated config file: local mode stores it in the moonshine-v .env as <PREFIX>_API_KEY, hosted mode in the encrypted tenant secret store.',
                     ],
                     'panel' => [
                         'type' => 'string',
@@ -133,7 +133,7 @@ final class RegisterServiceTool implements ToolContract
                     ],
                     'admin_login' => [
                         'type' => 'boolean',
-                        'description' => 'When true, this service panel uses delegated admin login: the MoonShine login form sends the entered username/password to the upstream auth flow and stores only the resulting token/cookie state in the Laravel session. For auth_type="oauth2_password", register token_url + oauth_client_id + oauth_client_secret but omit oauth_username/oauth_password; the human supplies them at /<panel>/login. For auth_type="session", register session_login_endpoint + csrf_* settings but omit session_username/session_password. The default false keeps the legacy static service credential mode for MCP/background calls.',
+                        'description' => 'When true, this service panel uses delegated admin login: the MoonShine login form sends the entered username/password to the upstream auth flow and stores only the resulting token/cookie state in the Laravel session. For auth_type="oauth2_password", register token_url + oauth_client_id + oauth_client_secret but omit oauth_username/oauth_password; the human supplies them at /<panel>/login. For auth_type="session", register session_login_endpoint + csrf_* settings but omit session_username/session_password. The default false keeps the static service credential mode for MCP/background calls.',
                     ],
                     'admin_auth_mode' => [
                         'type' => 'string',
@@ -185,15 +185,15 @@ final class RegisterServiceTool implements ToolContract
                     ],
                     'oauth_username' => [
                         'type' => 'string',
-                        'description' => 'Resource-owner username. Required when auth_type="oauth2_password". Stored in moonshine-v .env as <PREFIX>_OAUTH_USERNAME.',
+                        'description' => 'Resource-owner username. Required when auth_type="oauth2_password". Stored in the service configuration.',
                     ],
                     'oauth_password' => [
                         'type' => 'string',
-                        'description' => 'Resource-owner password. Required when auth_type="oauth2_password". Stored in moonshine-v .env as <PREFIX>_OAUTH_PASSWORD. Omit on re-register to preserve the stored value.',
+                        'description' => 'Resource-owner password. Required when auth_type="oauth2_password". Stored as <PREFIX>_OAUTH_PASSWORD in the moonshine-v .env locally, or in the encrypted tenant secret store in hosted mode. Omit on re-register to preserve the stored value.',
                     ],
                     'oauth_refresh_token' => [
                         'type' => 'string',
-                        'description' => 'Initial refresh token seed for auth_type="oauth2_refresh_token". Required on first registration; subsequent rotations are persisted by OAuth2TokenStore so re-registers can omit this. Stored in .env as <PREFIX>_OAUTH_REFRESH_TOKEN.',
+                        'description' => 'Initial refresh token seed for auth_type="oauth2_refresh_token". Required on first registration; subsequent rotations are persisted by OAuth2TokenStore so re-registers can omit this. Stored as <PREFIX>_OAUTH_REFRESH_TOKEN in the moonshine-v .env locally, or in the encrypted tenant secret store in hosted mode.',
                     ],
                     'session_login_endpoint' => [
                         'type' => 'string',
@@ -218,7 +218,7 @@ final class RegisterServiceTool implements ToolContract
                     ],
                     'session_password' => [
                         'type' => 'string',
-                        'description' => 'Resource-owner password for session login. Required when auth_type="session". Stored in moonshine-v .env as <PREFIX>_SESSION_PASSWORD. Omit on re-register to preserve the stored value.',
+                        'description' => 'Resource-owner password for session login. Required when auth_type="session". Stored as <PREFIX>_SESSION_PASSWORD in the moonshine-v .env locally, or in the encrypted tenant secret store in hosted mode. Omit on re-register to preserve the stored value.',
                     ],
                     'csrf_token_source' => [
                         'type' => 'string',
@@ -643,7 +643,8 @@ final class RegisterServiceTool implements ToolContract
         // outside moonshine-v (scope guard), so the tool does it here. We
         // update ONLY the keys owned by this service — never anything else.
         // Sensitive secrets (oauth password / refresh token, session password)
-        // ride the same lane: they live in .env, not in the baked config file.
+        // ride the same lane: they live in .env locally and in the tenant
+        // secret store in hosted mode, never in the baked config file.
         $tenant = $this->currentTenantContext();
         $secretValues = array_filter([
             'api_key' => $apiKey,
@@ -1320,9 +1321,8 @@ final class RegisterServiceTool implements ToolContract
             }
         }
 
-        // Config file fallback (legacy / tests). Sensitive keys are stubbed
-        // out by updateConfig so this almost always returns '' unless the
-        // service was registered before the secret-via-env split landed.
+        // Literal values written into the service config by hand. Generated
+        // entries stub sensitive keys out, so this normally returns ''.
         return $this->readExistingServiceField($name, $configKey);
     }
 

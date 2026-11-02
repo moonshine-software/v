@@ -7,9 +7,12 @@ namespace Tests\ApiAdmin\Integration;
 use App\ApiAdmin\MCP\Tools\RegisterServiceTool;
 use Illuminate\Support\Facades\File;
 use Orchestra\Testbench\TestCase;
+use Tests\ApiAdmin\Concerns\UsesIsolatedProjectRoot;
 
 class RegisterServiceAuthSchemesTest extends TestCase
 {
+    use UsesIsolatedProjectRoot;
+
     private string $tmpRoot;
 
     private string $envPath;
@@ -17,6 +20,7 @@ class RegisterServiceAuthSchemesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->useIsolatedProjectRoot(app());
 
         $this->tmpRoot = sys_get_temp_dir().'/moonshine-test-auth-'.uniqid('', true);
         File::ensureDirectoryExists($this->tmpRoot.'/Configs');
@@ -43,9 +47,7 @@ class RegisterServiceAuthSchemesTest extends TestCase
             File::deleteDirectory($this->tmpRoot);
         }
 
-        @unlink(config_path('api-admin.php'));
-        @unlink(config_path('moonshine.php'));
-        @unlink($this->envPath);
+        $this->removeIsolatedProjectRoot();
         config([
             'api-admin.services' => [],
             'api-admin.generated_services_path' => storage_path('api-admin/generated/services.php'),
