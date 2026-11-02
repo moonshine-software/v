@@ -671,9 +671,14 @@ abstract class AbstractRestResource extends CrudResource
         $path = \Illuminate\Pagination\Paginator::resolveCurrentPath();
         $nextPageUrl = null;
         if ($nextString !== null) {
-            $separator = str_contains($path, '?') ? '&' : '?';
-            $nextPageUrl = $path.$separator.$mapping->cursorQueryParam.'='.rawurlencode($nextString);
+            $nextPageUrl = request()->fullUrlWithQuery([$mapping->cursorQueryParam => $nextString]);
         }
+
+        Log::debug('[FIX:rest-pagination] Cursor navigation prepared', [
+            'resource' => static::class,
+            'query_keys' => array_keys(request()->query()),
+            'has_next' => $nextString !== null,
+        ]);
 
         return new \MoonShine\Core\Paginator\Paginator(
             path: $path,
@@ -885,6 +890,8 @@ abstract class AbstractRestResource extends CrudResource
 
         if ($isNew) {
             $this->isRecentlyCreated = true;
+        } else {
+            $responseData = $this->normalizeCrudItem($responseData === [] ? $data : $responseData, $itemKey);
         }
 
         $result = $this->getCaster()->cast($responseData);
@@ -897,7 +904,7 @@ abstract class AbstractRestResource extends CrudResource
             $field->afterApply($result);
         }
 
-        Log::info('AbstractRestResource::save — completed', [
+        Log::info('[FIX:rest-save] AbstractRestResource::save — completed', [
             'resource' => static::class,
             'result_key' => $result->getKey(),
             'is_new' => $isNew,

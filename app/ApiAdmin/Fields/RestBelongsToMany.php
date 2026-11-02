@@ -8,7 +8,9 @@ use App\ApiAdmin\Fields\Concerns\HasEndpointQuery;
 use App\ApiAdmin\Http\PathSegment;
 use App\ApiAdmin\Resources\AbstractRestResource;
 use Closure;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use LogicException;
 use MoonShine\Contracts\Core\TypeCasts\DataWrapperContract;
 use MoonShine\UI\Fields\Select;
@@ -264,10 +266,10 @@ class RestBelongsToMany extends Select
 
             return $bucket;
         } catch (Throwable $e) {
-            Log::error('RestBelongsToMany::primeAssociations — failed', [
+            Log::error('[FIX:rest-relations] RestBelongsToMany::primeAssociations — failed', [
                 'field' => $this->getColumn(),
-                'endpoint' => $endpoint,
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
             ]);
 
             return [];
@@ -387,9 +389,10 @@ class RestBelongsToMany extends Select
 
             return $options;
         } catch (Throwable $e) {
-            Log::error('RestBelongsToMany::loadOptions — failed', [
+            Log::error('[FIX:rest-relations] RestBelongsToMany::loadOptions — failed', [
                 'field' => $this->getColumn(),
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
             ]);
 
             return [];
@@ -444,9 +447,10 @@ class RestBelongsToMany extends Select
 
             return true;
         } catch (Throwable $e) {
-            Log::error('RestBelongsToMany::syncRelation — failed', [
+            Log::error('[FIX:rest-relations] RestBelongsToMany::syncRelation — failed', [
                 'field' => $this->getColumn(),
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
             ]);
 
             return false;
@@ -571,9 +575,10 @@ class RestBelongsToMany extends Select
 
             return $ids;
         } catch (Throwable $e) {
-            Log::error('RestBelongsToMany::loadCurrentAssociations — failed', [
+            Log::error('[FIX:rest-relations] RestBelongsToMany::loadCurrentAssociations — failed', [
                 'field' => $this->getColumn(),
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
             ]);
 
             return [];
@@ -660,7 +665,11 @@ class RestBelongsToMany extends Select
                     $normalized[] = $id;
                 }
             }
-            $this->syncRelation($normalized, $parentItem);
+            if (! $this->syncRelation($normalized, $parentItem)) {
+                throw ValidationException::withMessages([
+                    $this->getColumn() => 'The record was saved, but this relation could not be saved. Retry saving the relation.',
+                ]);
+            }
         }
 
         return $data;

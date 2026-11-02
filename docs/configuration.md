@@ -109,6 +109,15 @@ The package is stack-free — it works with any API response format. `ResponseMa
 | `perPageParamName` | string | `"per_page"` | Upstream request parameter for page size |
 | `zeroBasedPages` | bool | `false` | Translate zero-based upstream pages to one-based UI/MCP pages |
 
+REST form updates accept `204 No Content`: the form keeps the known record ID
+and submitted values, and then saves its many-to-many relations. These are separate
+upstream requests. If a relation write fails after the record was saved, the form
+shows a partial-save error; it cannot roll back the completed upstream write.
+Retry saving the relation after resolving the API error.
+
+Cursor pagination preserves the current filters, search and sort when advancing,
+and replaces only the configured `cursor_query_param` value.
+
 ## API Format Examples
 
 ### Laravel / standard

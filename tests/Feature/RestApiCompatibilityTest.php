@@ -172,6 +172,38 @@ final class RestApiCompatibilityTest extends TestCase
         Http::assertSent(static fn (Request $request): bool => $request['page'] === $page);
     }
 
+    /** @return iterable<string, array{string, ?string}> */
+    public static function cursorPages(): iterable
+    {
+        yield 'default cursor' => ['cursor', 'opaque+/=&? token'];
+        yield 'custom cursor' => ['after', 'next-token'];
+        yield 'last page' => ['cursor', null];
+    }
+
+    #[DataProvider('cursorPages')]
+    public function test_cursor_navigation_preserves_the_query_and_replaces_only_its_cursor(string $parameter, ?string $next): void
+    {
+        Http::fake(['*' => Http::response(['data' => [['id' => 7]], 'cursor' => ['next' => $next]])]);
+        $context = ['sort' => '-id', 'search' => 'some words', 'filter' => ['status' => 'published'], '_component_name' => 'items'];
+        app()->instance('request', BrowserRequest::create('https://panel.test/admin/items', parameters: [...$context, $parameter => 'old-token']));
+        $resource = $this->resource(new ResponseMapping(paginationType: 'cursor', cursorQueryParam: $parameter));
+        $paginator = $resource->getItems();
+
+        $this->assertInstanceOf(Paginator::class, $paginator);
+        $this->assertSame($next === null ? null : request()->fullUrlWithQuery([$parameter => $next]), $paginator->getNextPageUrl());
+        $paginator->setPath('https://panel.test/component');
+        if ($next === null) {
+            $this->assertNull($paginator->getNextPageUrl());
+        } else {
+            $url = $paginator->getNextPageUrl();
+            $this->assertNotNull($url);
+            $this->assertStringStartsWith('https://panel.test/component?', $url);
+            parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+            $this->assertSame([...$context, $parameter => $next], $query);
+        }
+        Http::assertSent(static fn (Request $request): bool => $request[$parameter] === 'old-token');
+    }
+
     /** @return iterable<string, array{string}> */
     public static function invalidLinkPages(): iterable
     {

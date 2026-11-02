@@ -20,9 +20,10 @@ and to people representing the project elsewhere.
 
 ## Reporting and enforcement
 
-Report conduct problems privately to the maintainers at
-[thecutcode@gmail.com](mailto:thecutcode@gmail.com). Do not use this address for
-security vulnerabilities; follow [SECURITY.md](SECURITY.md) instead.
+Report conduct problems privately: use GitHub's **Report content** option on the
+comment, issue or pull request, or contact a repository maintainer through their
+GitHub profile without repeating the details in public. Do not use these channels
+for security vulnerabilities; follow [SECURITY.md](SECURITY.md) instead.
 
 Maintainers review every report, keep the reporter's identity confidential and may
 edit or remove contributions, or warn, temporarily ban or permanently ban a

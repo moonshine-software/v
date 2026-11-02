@@ -14,6 +14,55 @@ if (($_SERVER['HTTP_AUTHORIZATION'] ?? '') !== 'Bearer link-pagination-token') {
     echo json_encode(['message' => 'Server credentials required']);
     exit;
 }
+if (is_string($path) && preg_match('#^/save(?:/7(/tags)?)?$#', $path, $match) === 1) {
+    $statePath = __DIR__.'/save-state.json';
+    $state = ['id' => 7, 'title' => 'Original', 'tag_ids' => [1]];
+    $saved = is_file($statePath) ? json_decode((string) file_get_contents($statePath), true) : null;
+    if (is_array($saved) && is_string($saved['title'] ?? null) && is_array($saved['tag_ids'] ?? null)) {
+        $state['title'] = $saved['title'];
+        $state['tag_ids'] = $saved['tag_ids'];
+    }
+    $tags = [['id' => 1, 'name' => 'PHP'], ['id' => 2, 'name' => 'Laravel'], ['id' => 3, 'name' => 'Testing']];
+    $isRelation = isset($match[1]);
+    if (($_SERVER['REQUEST_METHOD'] ?? '') === 'PUT') {
+        $payload = json_decode((string) file_get_contents('php://input'), true);
+        if (! is_array($payload)) {
+            http_response_code(422);
+            exit;
+        }
+        if ($isRelation && $state['title'] === 'Fail relation') {
+            http_response_code(500);
+            echo json_encode(['password' => 'private-relation-secret']);
+            exit;
+        }
+        if ($isRelation) {
+            if (! is_array($payload['ids'] ?? null)) {
+                http_response_code(422);
+                exit;
+            }
+            $state['tag_ids'] = array_map(
+                static fn (mixed $id): int => is_numeric($id) ? (int) $id : throw new InvalidArgumentException('Invalid tag ID.'),
+                $payload['ids'],
+            );
+        } else {
+            if (! is_string($payload['title'] ?? null)) {
+                http_response_code(422);
+                exit;
+            }
+            $state['title'] = $payload['title'];
+        }
+        file_put_contents($statePath, json_encode($state, JSON_THROW_ON_ERROR));
+        http_response_code(204);
+        exit;
+    }
+    $data = $isRelation ? array_values(array_filter($tags, static fn (array $tag): bool => in_array($tag['id'], $state['tag_ids'], true))) : $state;
+    echo json_encode(['data' => $path === '/save' ? [$state] : $data]);
+    exit;
+}
+if ($path === '/tags') {
+    echo json_encode(['data' => [['id' => 1, 'name' => 'PHP'], ['id' => 2, 'name' => 'Laravel'], ['id' => 3, 'name' => 'Testing']]]);
+    exit;
+}
 if (is_string($path) && preg_match('#^/owners(?:/(\d+))?$#', $path, $match) === 1) {
     $names = [1 => 'Technology', 2 => 'Science', 3 => 'Design'];
     $owners = array_map(static fn (int $id): array => [
@@ -30,7 +79,7 @@ if (is_string($path) && preg_match('#^/owners(?:/(\d+))?$#', $path, $match) === 
     }
     exit;
 }
-if (! in_array($path, ['/simple', '/numbered'], true)) {
+if (! in_array($path, ['/simple', '/numbered', '/cursor'], true)) {
     http_response_code(404);
     exit;
 }
@@ -50,6 +99,14 @@ for ($id = 1; $id <= 11; $id++) {
 }
 if (($_GET['sort'] ?? '') === '-id') {
     $rows = array_reverse($rows);
+}
+if ($path === '/cursor') {
+    $offset = is_string($_GET['after'] ?? null) ? (int) base64_decode($_GET['after'], true) : 0;
+    echo json_encode([
+        'data' => array_slice($rows, $offset, 2),
+        'cursor' => ['next' => $offset + 2 < count($rows) ? base64_encode((string) ($offset + 2)) : null],
+    ]);
+    exit;
 }
 $page = max(1, is_numeric($_GET['page'] ?? null) ? (int) $_GET['page'] : 1);
 $lastPage = max(1, (int) ceil(count($rows) / 2));

@@ -4,7 +4,7 @@ Notable changes to MoonShine V. The project follows [Semantic Versioning](https:
 
 ## Unreleased
 
-First public version. Issues found and fixed during pre-release verification are listed in [Release readiness](docs/release-readiness.md#resolved-findings).
+First public version. Pre-release verification and the security guarantees it covers are summarized in [Release readiness](docs/release-readiness.md).
 
 ### Added
 

@@ -207,6 +207,29 @@ foreach (['simple', 'numbered'] as $name) {
     ]];
 }
 
+array_push(
+    $steps,
+    ['create_resource', [
+        'service' => 'links', 'name' => 'save', 'endpoint' => '/save', 'actions' => ['view', 'update'],
+        'fields' => [
+            ['column' => 'id', 'type' => 'id', 'hide_on' => ['form']],
+            ['column' => 'title', 'type' => 'text'],
+            ['column' => 'tags', 'type' => 'belongs_to_many', 'endpoint' => '/tags', 'attach_endpoint' => '/save/{parent_id}/tags'],
+        ],
+    ]],
+    ['register_service', [
+        'name' => 'cursor', 'base_url' => "http://127.0.0.1:{$ports['links']}", 'api_key' => 'link-pagination-token',
+        'health_path' => '/health', 'response_format' => 'custom',
+        'response_mapping' => ['pagination_type' => 'cursor', 'cursor_query_param' => 'after'],
+    ]],
+    ['create_resource', [
+        'service' => 'cursor', 'name' => 'item', 'endpoint' => '/cursor', 'actions' => ['view'],
+        'fields' => [['column' => 'id', 'type' => 'id', 'methods' => ['sortable']], ['column' => 'title', 'type' => 'text']],
+        'search' => ['title'],
+        'filters' => [['column' => 'status', 'type' => 'select', 'options' => $selectOptions]],
+    ]],
+);
+
 $preview = static fn (string $prefix): array => [[
     'name' => 'resolvePreview',
     'return' => 'string',

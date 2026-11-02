@@ -177,6 +177,14 @@ Full rationale and individual fix commands: `.ai-factory/RULES.md`.
 
 REST save diagnostics log payload keys only, never values. Instructor completion
 links use `TenantRoutes` so hosted panels retain the tenant prefix.
+REST updates preserve the known primary key and submitted values on empty `204`
+responses so relation `afterApply()` still runs with the parent identity. A failed
+`RestBelongsToMany` sync must raise a safe field validation error explaining that
+the parent was saved; never return a successful form response or chain the raw
+upstream exception. All relation error logs retain only exception class and HTTP
+status. Cursor links replace only their configured cursor parameter and preserve
+the current filter/search/sort query, including through async table URL rewrites.
+Coverage: `RestFormSaveTest`, `RestApiCompatibilityTest`, `rest-save-pagination.spec.mjs`.
 Async relation searches use the target service's `search_param_name` and retain
 server-owned `endpoint_query` values. Error diagnostics use exception class and
 HTTP status, never upstream response bodies or exception messages. Feature coverage:
