@@ -2,7 +2,7 @@
 
 # Release readiness
 
-Last verified: 2026-11-01. This records what was checked and what remains out of scope. It does not replace checking your own infrastructure.
+Last verified: 2026-11-02. The PHP gate, installer tests and Docker recovery checks were rerun on this date; the other results below were recorded on 2026-11-01. This does not replace checking your own infrastructure.
 
 ## Status
 
@@ -24,11 +24,11 @@ Before tagging a release:
 | Check | Result |
 |---|---|
 | `XDEBUG_MODE=off composer ai:validate` | Exit 0: Pint, Rector, production audit, PHPStan level max, PHPUnit |
-| PHPUnit | **915 passed, 4696 assertions**, including real API compatibility, HTTP authorization and secret-free save diagnostics |
+| PHPUnit | **917 passed, 4712 assertions**, including real API compatibility, HTTP authorization and secret-free save/error diagnostics |
 | Chrome E2E (`npm run test:e2e`) | **48 passed**, including hosted onboarding, Django navigation, custom field tools and authenticated Link-header pagination with filters/search/sort |
 | Concurrent generator/field-tool tests | Two simultaneous processes pass, sharing the same checkout and temporary-directory base |
 | Installer unit tests (`npm run test:installer`) | **16 passed** |
-| Fresh Docker installation (`npm run test:installer:docker`) | Passed: secret exclusion, administrator login, MCP discovery, resume and restart persistence |
+| Fresh Docker installation (`npm run test:installer:docker`) | Passed: secret exclusion, administrator login, MCP discovery, backup/damage/restore, HTTP cookies, resume and restart persistence |
 | Production smoke (`docker/smoke.sh`) | Passed: PostgreSQL, Redis, queue, generated state, custom field tools, container recreation, backup/restore, backend outage |
 | Development stack (`docker/docker-compose.yml`) | Passed: all services healthy, custom host ports, generation and data tools through `docker exec` MCP |
 | `composer audit --locked`, `npm audit` | 0 advisories, including development dependencies |
@@ -40,6 +40,8 @@ Hosted MCP was also exercised with the official MCP SDK: handshake, ping, `tools
 
 | Finding | Resolution and evidence |
 |---|---|
+| Upstream exceptions copied credentials into logs | Error diagnostics retain only the exception class and HTTP status. Feature tests exercise MCP item creation with secrets in a 500 response and a connection-error URL, verify no secret reaches logs, and preserve the MCP error response. |
+| Installer backup left the application stopped | `PRODUCTION_COMPOSE_OVERRIDE` applies the local override to every backup/restore command. The installer Docker test backs up, damages and restores generated state, encrypted database data and Redis, then checks HTTP cookies, administrator persistence and MCP. |
 | Link-header pagination navigated directly to the API | Only positive page numbers are read from upstream links; panel URLs retain the current query without copying upstream credentials. Feature tests cover first/middle/last and invalid pages; Chrome checks authenticated simple/full navigation and no direct browser requests to the API. |
 | Concurrent tests overwrote or deleted each other's generated state | Generator resources/specs use an independent temporary root, field-tool service identifiers use random suffixes, and custom field/component tests run in a private copy of the project files instead of editing the checkout. |
 | Custom field tools corrupted the application config | A second `create_field`, `update_field` and `delete_field` wrote invalid PHP to `config/api-admin.php`, stopping the application and MCP. `ConfigArrayBlock` edits the array through PHP tokens and refuses invalid results. Tests re-read the file after each tool; Chrome opens a panel using a created and updated field after another was deleted. |

@@ -33,10 +33,10 @@ final class UpstreamErrorResponder
             return ['success' => false, 'code' => 'VALIDATION', 'error' => $e->getMessage()];
         }
 
-        Log::error('UpstreamErrorResponder::fromThrowable', [
+        // Exception messages can contain response bodies or credential-bearing URLs.
+        Log::error('[FIX:upstream-error] UpstreamErrorResponder::fromThrowable', [
             'exception' => $e::class,
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString(),
+            'status' => $e instanceof RequestException ? $e->response->status() : null,
         ]);
 
         if ($e instanceof RequestException) {

@@ -16,3 +16,8 @@ First public version.
 - Hosted mode with tenant-bound MCP tokens and explicit browser memberships.
 - Realtime refresh from upstream webhooks.
 - Cross-platform interactive installer and a production Compose stack with backup and restore.
+
+### Fixed
+
+- Upstream error logs omit response bodies and exception messages that can contain credentials.
+- Installer backup and restore support the local Compose override, preserving HTTP and cookie settings after restart.

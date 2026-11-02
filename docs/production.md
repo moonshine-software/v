@@ -114,6 +114,12 @@ IDs and restarts the application. If a step fails, writers remain stopped for
 investigation. This is a planned maintenance backup; use a coordinated external
 backup system if zero downtime is required.
 
+`PRODUCTION_ENV_FILE` selects a different environment file. When the deployment
+also requires a Compose override, set `PRODUCTION_COMPOSE_OVERRIDE` to that file;
+the shared wrapper applies it to every backup/restore command. Docker's standard
+`DOCKER_CONTEXT` selects the target engine. Installer-managed local stacks require
+their saved context and local override; use the [installer recovery instructions](installation.md#public-deployment-and-upgrades).
+
 To test restoration, use a separate Compose project and ingress port, restore the
 saved environment/APP_KEY and matching image versions, initialize the stack,
 then run:

@@ -154,8 +154,27 @@ secure cookies, backup/restore and image-based upgrades. Do not publish the loca
 HTTP port or carry its cookie override into a public deployment.
 
 The production backup procedure covers PostgreSQL, all application state and
-Redis persistence. Apply it with this installation's environment and retain
-`runtime.env` separately; copying the checkout alone is not a data backup.
+Redis persistence. In Bash, from the installation directory, select the saved
+Docker context and supply both the installation environment and its local
+Compose override before running the recovery scripts:
+
+```sh
+export DOCKER_CONTEXT="$(node -p 'JSON.parse(require("node:fs").readFileSync(".moonshine-install/state.json", "utf8")).context')"
+export PRODUCTION_ENV_FILE="$PWD/.moonshine-install/runtime.env"
+export PRODUCTION_COMPOSE_OVERRIDE="$PWD/.moonshine-install/compose.local.json"
+bash docker/backup.sh /secure/backups/moonshine-v-TIMESTAMP
+```
+
+Keep `runtime.env` separately; copying the checkout alone is not a data backup.
+To restore that backup, with the same environment selected:
+
+```sh
+bash docker/restore.sh /secure/backups/moonshine-v-TIMESTAMP
+```
+
+Restore replaces the installation's database, generated state and Redis data.
+The local override must be used throughout backup and restore so the stack
+restarts with loopback HTTP and the correct cookie settings.
 Moving to hosted mode also requires the [Hosted Security](hosted-security.md)
 membership and upgrade steps.
 
