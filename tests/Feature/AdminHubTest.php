@@ -77,6 +77,16 @@ class AdminHubTest extends TestCase
         $this->assertSame(['catalog-admin', 'admin'], array_keys($panels));
     }
 
+    public function test_hub_is_branded_as_the_product(): void
+    {
+        $config = $this->loadConfig('moonshine.php');
+        $panels = $config['panels'] ?? null;
+
+        $this->assertIsArray($panels);
+        $this->assertIsArray($panels['admin'] ?? null);
+        $this->assertSame('MoonShine V', $panels['admin']['title'] ?? null);
+    }
+
     /**
      * @return array<mixed>
      */

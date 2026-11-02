@@ -50,7 +50,9 @@ bash docker/production.sh exec api-admin-fpm php artisan moonshine:user
 
 The last command creates the initial platform operator interactively. No default
 admin credentials or demo service panels are enabled. Choose hosted mode and MCP
-transport explicitly in the environment only after tenant/operator provisioning.
+transport explicitly in the environment only after tenant/operator provisioning;
+create tenants, memberships and MCP tokens with the operator commands in
+[Hosted Security](hosted-security.md#provision-a-tenant).
 
 The `init` job seeds the dedicated application state volume and sets its owner;
 `migrate` applies database migrations before FPM starts. FPM, queue and scheduler

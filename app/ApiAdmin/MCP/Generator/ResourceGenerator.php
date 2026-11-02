@@ -93,7 +93,7 @@ final class ResourceGenerator
         'file' => ['class' => \MoonShine\UI\Fields\File::class, 'alias' => 'File', 'group' => 'media', 'description' => 'Generic file upload.'],
         'json' => ['class' => Json::class, 'alias' => 'Json', 'group' => 'scalar', 'description' => 'Structured JSON editor (array of key/value rows).'],
         'color' => ['class' => Color::class, 'alias' => 'Color', 'group' => 'scalar', 'description' => 'Color picker.'],
-        // MoonShine 4 does not ship a dedicated Slug field; alias to Text for UI parity.
+        // MoonShine has no dedicated Slug field; alias to Text for UI parity.
         'slug' => ['class' => Text::class, 'alias' => 'Text', 'group' => 'scalar', 'description' => 'URL-safe slug (aliased to Text, no auto-transform).'],
         'url' => ['class' => Url::class, 'alias' => 'Url', 'group' => 'scalar', 'description' => 'URL input with href preview.'],
         'belongs_to' => ['class' => RestBelongsTo::class, 'alias' => 'RestBelongsTo', 'group' => 'relation', 'description' => 'Parent REST relation (single FK lookup).'],
@@ -298,7 +298,7 @@ final class ResourceGenerator
         // Generate relation sub-resources first (has_many, has_one with sub-fields)
         $relationResources = $this->generateRelationResources($fields, $serviceName, $serviceBaseName, $endpoint);
 
-        // Build field code for pages. MoonShine 4 removed per-field
+        // Build field code for pages. MoonShine 4+ has no per-field
         // visibility helpers (hideOnForm / hideOnCreate / hideOnUpdate) —
         // the supported way to hide a field from a page is to omit it from
         // that page's fields() method. `hide_on: ["form", "index", "detail"]`
@@ -698,7 +698,7 @@ final class ResourceGenerator
             // password to an upstream service that does its own hashing. The
             // native Password field defaults to hashing via Hasher::make on
             // apply, which would double-hash and lock users out. `->raw()`
-            // (shipped in MoonShine 4.x) flips the field into raw-passthrough
+            // (available since MoonShine 4) flips the field into raw-passthrough
             // mode. Emit it unconditionally for `type: password`.
             if ($type === 'password') {
                 $line .= '->raw()';
@@ -2244,7 +2244,7 @@ PHP;
                 Log::warning('ResourceGenerator: dropping unknown field method', [
                     'field_class' => $fieldClass,
                     'method' => $name,
-                    'hint' => 'Method does not exist on the generated field class. Most common cause: legacy v2/v3 helper (e.g. hideOnForm, hideOnCreate) — in MoonShine 4 use page-level fields() instead.',
+                    'hint' => 'Method does not exist on the generated field class. Most common cause: legacy v2/v3 helper (e.g. hideOnForm, hideOnCreate) — since MoonShine 4, hide fields per page with the hide_on spec key or page-level fields().',
                 ]);
                 continue;
             }

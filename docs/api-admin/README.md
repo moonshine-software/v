@@ -69,8 +69,9 @@ generated files.
 ],
 ```
 
-Hosted deployments set `API_ADMIN_HOSTED_MODE=hosted` and issue tenant-bound
-MCP tokens. A developer `.mcp.json` points at
+Hosted deployments set `API_ADMIN_HOSTED_MODE=hosted`, create tenants with
+`php artisan api-admin:tenant` and issue tenant-bound MCP tokens with
+`php artisan api-admin:mcp-token` ([provisioning](../hosted-security.md#provision-a-tenant)). A developer `.mcp.json` points at
 `https://<host>/t/<tenant>/api-admin/mcp` and sends only that token; service
 secrets remain in tenant-scoped hosted storage. Run `health_check({})` after
 provisioning to verify tenant-visible services and deployment diagnostics.

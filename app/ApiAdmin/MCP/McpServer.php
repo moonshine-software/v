@@ -99,28 +99,28 @@ final class McpServer
             'update_resource' => new UpdateResourceTool,
             'fetch_resource_items' => new FetchResourceItemsTool,
             'fetch_resource_item' => new FetchResourceItemTool,
-            // Phase 5 — analytics
+            // Analytics
             'count_resource' => new CountResourceTool,
             'aggregate_resource' => new AggregateResourceTool,
-            // Built-in instructor agent
+            // Browser onboarding status
             'instructor_status' => new InstructorStatusTool,
-            // Phase 1 — introspection
+            // Introspection
             'list_fields' => new ListFieldsTool,
             'describe_field_type' => new DescribeFieldTypeTool,
             'list_field_methods' => new ListFieldMethodsTool,
             'list_components' => new ListComponentsTool,
-            // Phase 2 — resource-item CRUD
+            // Resource-item CRUD
             'create_resource_item' => new CreateResourceItemTool,
             'update_resource_item' => new UpdateResourceItemTool,
             'delete_resource_item' => new DeleteResourceItemTool,
-            // Phase 3 — custom field/component generation
+            // Custom field/component generation (trusted local mode)
             'create_field' => new CreateFieldTool,
             'update_field' => new UpdateFieldTool,
             'delete_field' => new DeleteFieldTool,
             'create_component' => new CreateComponentTool,
             'update_component' => new UpdateComponentTool,
             'delete_component' => new DeleteComponentTool,
-            // Phase 4 — partial resource deltas
+            // Partial resource deltas
             'add_field' => new AddFieldTool,
             'remove_field' => new RemoveFieldTool,
             'rename_field' => new RenameFieldTool,

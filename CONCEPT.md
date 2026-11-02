@@ -88,7 +88,8 @@ npx --yes --package=https://github.com/moonshine-software/v/archive/refs/heads/m
 # 2. The installer connects your MCP client
 # (a template for manual setup ships as .mcp.json.example)
 
-# 3. Restart Claude Code — tools prefixed with moonshine-v_ are visible
+# 3. Restart Claude Code — the moonshine-<id> server's tools are visible
+#    (a manual .mcp.json entry named moonshine-v exposes them as moonshine-v_*)
 
 # 4. Talk to the agent:
 >>> "I have an API at https://api.acme.com/v1, token sk-xxx.

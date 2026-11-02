@@ -40,7 +40,7 @@ $apiAdminGeneratedPanels = is_string($apiAdminGeneratedPanelsPath) && is_file($a
 $apiAdminGeneratedPanels = is_array($apiAdminGeneratedPanels) ? $apiAdminGeneratedPanels : [];
 
 return [
-    'title' => env('MOONSHINE_TITLE', 'MoonShine'),
+    'title' => env('MOONSHINE_TITLE', 'MoonShine V'),
     'logo' => '/vendor/moonshine/logo-small.svg',
     'logo_small' => '/vendor/moonshine/logo-small.svg',
 
@@ -147,7 +147,7 @@ return [
         ...$apiAdminGeneratedPanels,
         'admin' => [
             'prefix' => $apiAdminPanelPrefix.'admin',
-            'title' => 'Admin',
+            'title' => 'MoonShine V',
             'layout' => AdminHubLayout::class,
             'pages' => [
                 'dashboard' => AdminHubPage::class,

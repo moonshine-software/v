@@ -6,8 +6,10 @@ namespace App\ApiAdmin\Providers;
 
 use App\ApiAdmin\Auth\UpstreamUserProvider;
 use App\ApiAdmin\Console\McpServerCommand;
+use App\ApiAdmin\Console\McpTokenCommand;
 use App\ApiAdmin\Console\MigrateTenantSecretsCommand;
 use App\ApiAdmin\Console\ReloadCommand;
+use App\ApiAdmin\Console\TenantCommand;
 use App\ApiAdmin\Console\TenantMembershipCommand;
 use App\ApiAdmin\Http\Controllers\InstructorController;
 use App\ApiAdmin\Http\Controllers\OAuthAuthorizationController;
@@ -107,6 +109,8 @@ class ApiAdminServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 ReloadCommand::class,
+                TenantCommand::class,
+                McpTokenCommand::class,
                 TenantMembershipCommand::class,
                 MigrateTenantSecretsCommand::class,
                 McpServerCommand::class,

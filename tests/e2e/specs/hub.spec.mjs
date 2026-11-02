@@ -5,6 +5,15 @@ test('the root URL leads guests to the hub login', async ({ page }) => {
     await page.goto('/');
 
     await expect(page).toHaveURL(/\/admin\/login$/);
+    await expect(page.getByRole('heading', { name: 'Welcome to MoonShine V!' })).toBeVisible();
+});
+
+test('the footer links to the project documentation', async ({ page }) => {
+    await signInToHub(page);
+
+    const footer = page.locator('footer');
+    await expect(footer.getByRole('link', { name: 'Documentation' })).toHaveAttribute('href', 'https://github.com/moonshine-software/v/tree/main/docs');
+    await expect(footer.getByRole('link', { name: 'MoonShine' })).toHaveAttribute('href', 'https://getmoonshine.app/docs');
 });
 
 test('a wrong password does not open the hub', async ({ page }) => {

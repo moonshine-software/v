@@ -284,7 +284,7 @@ class ResourceGeneratorTest extends TestCase
 
     public function test_generator_filters_fields_by_hide_on_per_page(): void
     {
-        // MoonShine 4 removed hideOnForm/hideOnCreate/hideOnUpdate from
+        // MoonShine 4+ has no hideOnForm/hideOnCreate/hideOnUpdate on
         // fields. Per-page visibility is now expressed by omitting the
         // field from that page's fields() — which is what the `hide_on`
         // spec key drives on the generator side.
@@ -308,7 +308,7 @@ class ResourceGeneratorTest extends TestCase
         $detail = File::get($result['pages']['detail']);
 
         // slug: visible on index+detail, hidden on form.
-        // Note: MoonShine 4 ships no dedicated Slug field — the generator
+        // Note: MoonShine ships no dedicated Slug field — the generator
         // aliases 'slug' to Text for UI parity.
         $this->assertStringContainsString("Text::make('Slug', 'slug')", $index);
         $this->assertStringContainsString("Text::make('Slug', 'slug')", $detail);

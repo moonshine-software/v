@@ -83,6 +83,8 @@ v/
 | `app/ApiAdmin/MCP/McpAuthorizationGate.php` | Shared MCP authorization gate for hosted token scopes and tenant/service access |
 | `app/ApiAdmin/MCP/HostedMcpController.php` | Hosted Streamable HTTP MCP entry point with tenant-bound bearer token authentication |
 | `app/Models/ApiAdminMcpToken.php` | Hosted developer MCP token metadata and hashed token storage |
+| `app/ApiAdmin/Console/TenantCommand.php` | `api-admin:tenant` — create, rename, list, activate and deactivate hosted tenants |
+| `app/ApiAdmin/Console/McpTokenCommand.php` | `api-admin:mcp-token` — issue (shown once), list and revoke tenant-bound MCP tokens |
 | `app/Models/MoonshineUserUpstreamIdentity.php` | Upstream subject link and encrypted refresh metadata for synced admin users |
 
 ## Key Vendor References
@@ -108,6 +110,7 @@ v/
 | Release Readiness | docs/release-readiness.md | Recorded release checks and limitations |
 | Security Policy | SECURITY.md | Private vulnerability reporting and supported code |
 | Contributing | CONTRIBUTING.md | Contributor setup, checks and pull request conventions |
+| Code of Conduct | CODE_OF_CONDUCT.md | Community standards and private conduct reporting |
 | Changelog | CHANGELOG.md | Notable changes per release |
 | Detailed MCP Tools | docs/api-admin/mcp-tools.md | Detailed schemas and JSON examples |
 | ServiceConfig | docs/api-admin/service-config.md | Service configuration reference |
@@ -378,7 +381,7 @@ The repository has no generated services: every developer deploys the project an
 
 The core is MoonShine `5.x-dev`, exact commit in `composer.lock`. `create_resource` / `update_resource` generate a list page based on `RestIndexPage`: `filters()` and `getFilters()` belong to the page, not the resource. This contract is kept in sync with the tool schema, tests, `LLMS.txt` and `McpServerCommand::agentInstructions()` under the common sync rule.
 
-Moonshine-v is a free Docker product. A developer starts the container and, from their Claude Code over MCP, builds admin panels over REST APIs or local Eloquent models without looking at moonshine-v code. In local/self-hosted mode operations go through the stdio MCP server: `php artisan api-admin:mcp-server`. In hosted mode the client connects to an HTTPS Streamable HTTP MCP endpoint with a tenant-bound bearer token; token scopes (`tools:read`, `tools:generate`, `tools:data:read`, `tools:data:write`, `tools:destructive`) grant access only to tool families, and `McpAuthorizationGate` still cuts off cross-tenant service/resource access before dispatch. Hosted `register_service` stores `api_key`, `oauth_client_secret`, delegated OAuth/session secrets and `webhook_secret` through the tenant-scoped `TenantSecretStore`; `.env` and literal secret fallbacks remain only for local/self-hosted mode.
+Moonshine-v is a free Docker product. A developer starts the container and, from their Claude Code over MCP, builds admin panels over REST APIs or local Eloquent models without looking at moonshine-v code. In local/self-hosted mode operations go through the stdio MCP server: `php artisan api-admin:mcp-server`. In hosted mode the client connects to an HTTPS Streamable HTTP MCP endpoint with a tenant-bound bearer token; token scopes (`tools:read`, `tools:generate`, `tools:data:read`, `tools:data:write`, `tools:destructive`) grant access only to tool families, and `McpAuthorizationGate` still cuts off cross-tenant service/resource access before dispatch. Operators provision hosted access with `api-admin:tenant` (create, rename, list, `--activate`/`--deactivate`), `api-admin:tenant-member` and `api-admin:mcp-token` (issue with explicit `--scope`, `--list`, `--revoke`); tokens are printed once and stored as SHA-256 hashes, and `McpAuthorizationGate::isKnownScope()` is the scope allowlist. There is deliberately no MCP tool for tenants or tokens. Hosted `register_service` stores `api_key`, `oauth_client_secret`, delegated OAuth/session secrets and `webhook_secret` through the tenant-scoped `TenantSecretStore`; `.env` and literal secret fallbacks remain only for local/self-hosted mode.
 
 Hosted generation policy: create_field/update_field/delete_field,
 create_component/update_component/delete_component, initialize_local_service,

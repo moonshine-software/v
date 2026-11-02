@@ -13,7 +13,7 @@ First public version.
 - Native Eloquent panels for models in the same Laravel application, in trusted local mode.
 - Separate panels per service with upstream, delegated-token and OAuth2/PKCE sign-in.
 - Browser onboarding through **Add service**.
-- Hosted mode with tenant-bound MCP tokens and explicit browser memberships.
+- Hosted mode with tenant-bound MCP tokens and explicit browser memberships, provisioned with `api-admin:tenant`, `api-admin:tenant-member` and `api-admin:mcp-token`.
 - Realtime refresh from upstream webhooks.
 - Cross-platform interactive installer and a production Compose stack with backup and restore.
 

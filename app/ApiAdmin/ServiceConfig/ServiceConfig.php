@@ -226,8 +226,6 @@ final readonly class ServiceConfig
      * Bearer/header/query/basic/none auth types are static — their credentials
      * cannot be "refreshed", so no handler is needed; a 401 means the credential
      * is wrong, not stale, and retrying would be pointless.
-     *
-     * Phase 3 (T6) extends this with the `session` arm.
      */
     public function authHandler(): ?AuthRetryHandler
     {

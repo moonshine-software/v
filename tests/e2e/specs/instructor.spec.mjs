@@ -5,6 +5,7 @@ test('a new service goes from probe to a working panel in the browser', async ({
     await signInToHub(page);
     await page.locator('main').getByRole('link', { name: 'Add service' }).click();
     await expect(page.locator('main')).toContainText('API discovery');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Add service');
 
     await page.locator('#base_url').fill(`http://127.0.0.1:${API_PORTS.blog}/v1`);
     await page.locator('#service_name').fill('wizard');

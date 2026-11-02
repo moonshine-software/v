@@ -8,6 +8,7 @@ use App\ApiAdmin\Providers\ApiAdminServiceProvider;
 use App\Models\ApiAdminMcpToken;
 use App\Models\ApiAdminTenant;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
 use MoonShine\Laravel\Providers\MoonShineServiceProvider;
 use MoonShine\MultiPanels\Providers\MultiPanelServiceProvider;
@@ -97,6 +98,36 @@ final class HostedMcpControllerTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('result.protocolVersion', '2025-06-18');
         $response->assertJsonPath('result.serverInfo.name', 'moonshine-v-hosted');
+    }
+
+    public function test_operator_commands_provision_a_working_tenant_token(): void
+    {
+        $this->assertSame(0, Artisan::call('api-admin:tenant', ['slug' => 'acme', '--name' => 'Acme']));
+        $this->assertSame(0, Artisan::call('api-admin:mcp-token', ['tenant' => 'acme', '--scope' => ['tools:read']]));
+        $this->assertSame(1, preg_match('/msv_[0-9a-f]{64}/', Artisan::output(), $match));
+        $token = $match[0] ?? '';
+        $call = fn (string $tool): array => [
+            'jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/call',
+            'params' => ['name' => $tool, 'arguments' => $tool === 'remove_service' ? ['name' => 'blog', 'confirm' => true] : []],
+        ];
+
+        $this->withToken($token)->postJson('/t/acme/api-admin/mcp', $call('list_services'))
+            ->assertOk()->assertJsonPath('result.isError', false);
+        $denied = $this->withToken($token)->postJson('/t/acme/api-admin/mcp', $call('remove_service'))
+            ->assertOk()->assertJsonPath('result.isError', true);
+        $deniedText = $denied->json('result.content.0.text');
+        $this->assertIsString($deniedText);
+        $this->assertStringContainsString('MCP_SCOPE_DENIED', $deniedText);
+
+        $this->assertSame(0, Artisan::call('api-admin:tenant', ['slug' => 'acme', '--deactivate' => true]));
+        $this->withToken($token)->postJson('/t/acme/api-admin/mcp', $call('list_services'))->assertUnauthorized();
+        $this->assertSame(0, Artisan::call('api-admin:tenant', ['slug' => 'acme', '--activate' => true]));
+        $this->withToken($token)->postJson('/t/acme/api-admin/mcp', $call('list_services'))->assertOk();
+
+        $issued = ApiAdminMcpToken::findValidToken($token);
+        $this->assertInstanceOf(ApiAdminMcpToken::class, $issued);
+        $this->assertSame(0, Artisan::call('api-admin:mcp-token', ['tenant' => 'acme', '--revoke' => (string) $issued->id]));
+        $this->withToken($token)->postJson('/t/acme/api-admin/mcp', $call('list_services'))->assertUnauthorized();
     }
 
     public function test_hosted_mcp_rejects_route_tenant_mismatch(): void

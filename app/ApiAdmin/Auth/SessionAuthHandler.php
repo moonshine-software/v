@@ -17,7 +17,7 @@ use Throwable;
 /**
  * Cookie + CSRF auto-login handler.
  *
- * Covers the three real-world session flows the milestone targets:
+ * Covers three common real-world session flows:
  *
  *   - Laravel Sanctum SPA: GET /sanctum/csrf-cookie → POST /login → captured
  *     XSRF-TOKEN cookie sent back in `X-XSRF-TOKEN` header.

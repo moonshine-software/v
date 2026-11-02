@@ -118,7 +118,8 @@ Also check `health_check({})` — every registered service reports `status: "ok"
 For hosted mode, run a separate minimal cycle with two tenants.
 
 - [ ] `API_ADMIN_HOSTED_MODE=hosted`, `API_ADMIN_HOSTED_MCP_ENABLED=true`, the route prefix stays `t/{tenant}` or another one is documented.
-- [ ] An active tenant `acme` and a tenant-bound MCP token with the `tools:read` scope exist for the initial check.
+- [ ] `php artisan api-admin:tenant acme` created an active tenant and `php artisan api-admin:mcp-token acme --scope=tools:read` printed a token for the initial check.
+- [ ] `php artisan api-admin:mcp-token acme --list` shows the token without revealing it; after `--revoke=<id>` the token gets 401.
 - [ ] The developer project's `.mcp.json` points only at a hosted URL like `https://<host>/t/acme/api-admin/mcp` plus the bearer token. No local moonshine-v clone is needed.
 - [ ] `initialize` over hosted MCP returns `serverInfo.name: "moonshine-v-hosted"`.
 - [ ] `list_services` returns only the services of tenant `acme`.

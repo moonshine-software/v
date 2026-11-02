@@ -30,7 +30,7 @@ final class InstructorPage extends Page
     #[Override]
     public function getTitle(): string
     {
-        return $this->title ?: 'Instructor Agent';
+        return $this->title ?: 'Add service';
     }
 
     /**

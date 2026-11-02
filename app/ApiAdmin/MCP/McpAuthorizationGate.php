@@ -187,6 +187,27 @@ final class McpAuthorizationGate
         return $group !== null && in_array("tools:{$group}", $scopes, true);
     }
 
+    /**
+     * Scopes that scopeAllows() understands, besides per-tool `tool:<name>`.
+     *
+     * @return list<string>
+     */
+    public function knownScopes(): array
+    {
+        $groups = array_map(static fn (string $group): string => "tools:{$group}", array_values(array_unique(self::TOOL_GROUPS)));
+
+        return ['*', 'tools:*', ...$groups];
+    }
+
+    public function isKnownScope(string $scope): bool
+    {
+        if (in_array($scope, $this->knownScopes(), true)) {
+            return true;
+        }
+
+        return str_starts_with($scope, 'tool:') && $this->toolGroup(substr($scope, 5)) !== null;
+    }
+
     public function toolGroup(string $toolName): ?string
     {
         return self::TOOL_GROUPS[$toolName] ?? null;

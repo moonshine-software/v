@@ -33,7 +33,9 @@ to the page; RestIndexPage attaches relation filters to the parent resource.
   access is denied even when the token has the requested tool scope.
 - Hosted `.mcp.json` should point at `https://<host>/t/<tenant>/api-admin/mcp`
   and send only the tenant-bound bearer token. Do not put upstream API
-  credentials in the developer-side MCP config.
+  credentials in the developer-side MCP config. Operators create tenants
+  and tokens with `php artisan api-admin:tenant` and
+  `php artisan api-admin:mcp-token`; agents cannot issue tokens over MCP.
 - Hosted OAuth/session cache keys, delegated admin session keys, service
   secrets, webhook verification, and browser realtime channels are also
   tenant-scoped. Never assume same-named services share runtime state

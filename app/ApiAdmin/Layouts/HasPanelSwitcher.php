@@ -24,9 +24,23 @@ use Throwable;
  * Provides:
  * - panelMenu(): auto-discovered menu filtered by current panel
  * - panelSwitcher(): MoonShine dropdown to navigate between panels
+ * - getFooterMenu(): links to this project's documentation and MoonShine's
  */
 trait HasPanelSwitcher
 {
+    public const string DOCUMENTATION_URL = 'https://github.com/moonshine-software/v/tree/main/docs';
+
+    /**
+     * @return array<string, string>
+     */
+    protected function getFooterMenu(): array
+    {
+        return [
+            self::DOCUMENTATION_URL => 'Documentation',
+            'https://getmoonshine.app/docs' => 'MoonShine',
+        ];
+    }
+
     /**
      * @return list<AssetElementContract>
      */

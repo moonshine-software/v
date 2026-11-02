@@ -132,8 +132,16 @@ QUEUE_CONNECTION=redis
 BROADCAST_CONNECTION=reverb
 ```
 
-Developers then point their local `.mcp.json` at the hosted MCP URL and a
-tenant-bound token:
+Create the tenant and a token inside the container (details and scopes in
+[Hosted Security](../hosted-security.md#provision-a-tenant)):
+
+```sh
+php artisan api-admin:tenant acme --name="Acme"
+php artisan api-admin:mcp-token acme --scope=tools:read --scope=tools:generate
+```
+
+Developers then point their local `.mcp.json` at the hosted MCP URL and the
+printed token:
 
 ```json
 {

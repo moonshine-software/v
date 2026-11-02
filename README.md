@@ -1,8 +1,12 @@
 # MoonShine V
 
+![Technology-stack planets connected to the MoonShine V lunar satellite, with a V-shaped crater on the moon](docs/images/moonshine-v-space-banner.png)
+
 > Build an admin panel for your APIs with an AI agent — or onboard a service directly in the browser.
 
 Connect a REST API, describe its resources, and generate a MoonShine admin UI with forms, tables, filters and relations. Agents configure it through the Model Context Protocol (MCP). The repository is a runnable Laravel application; its API Admin module lives in `app/ApiAdmin/`.
+
+![A generated Blog panel: a post with BelongsTo, HasMany, HasOne and BelongsToMany relations loaded over HTTP](docs/images/rest-panel.png)
 
 Free and MIT-licensed. Built on **PHP 8.5, Laravel 13 and MoonShine 5**. MoonShine currently uses the `5.x-dev` branch, with an exact commit pinned in `composer.lock`. Review the [release checks](docs/release-readiness.md) and [production guide](docs/production.md) before deploying publicly.
 

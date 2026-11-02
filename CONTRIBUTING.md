@@ -48,4 +48,5 @@ changes should pass `npm run test:installer:docker` against a running local Dock
   resources belong to each installation and must not be committed.
 - Do not commit `.env`, MCP tokens, local databases, uploads or installation state.
 
-Contributions are made under the project's [MIT license](LICENSE.md).
+Contributions are made under the project's [MIT license](LICENSE.md). All
+participants follow the [Code of Conduct](CODE_OF_CONDUCT.md).

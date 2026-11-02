@@ -10,6 +10,13 @@
         "mcp"
     ],
     "license": "MIT",
+    "homepage": "https://getmoonshine.app/v",
+    "support": {
+        "issues": "https://github.com/moonshine-software/v/issues",
+        "source": "https://github.com/moonshine-software/v",
+        "docs": "https://github.com/moonshine-software/v/tree/main/docs",
+        "security": "https://github.com/moonshine-software/v/security/policy"
+    },
     "require": {
         "php": "^8.5",
         "laravel/framework": "^13.0",

@@ -568,8 +568,8 @@ field, so it still follows `response_mapping.filter_format` and
 
 ## Built-in instructor (read-only status)
 
-The admin hub includes a MoonShine-native Instructor page for browser
-onboarding. The compatibility URL `/api-admin/instructor` redirects there. The
+The admin hub includes a MoonShine-native **Add service** page (the Instructor)
+for browser onboarding. The compatibility URL `/api-admin/instructor` redirects there. The
 flow asks for API base/auth details, probes safe GET endpoints, proposes a
 `register_service` payload plus an initial `create_resource` spec, and requires
 human confirmation before generated files are written.

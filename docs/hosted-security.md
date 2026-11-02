@@ -4,6 +4,55 @@
 
 Hosted browser accounts require an explicit membership in each tenant. An active tenant URL, platform login, MoonShine role, or membership in another tenant does not grant access. Platform operators also use explicit memberships; there is no implicit superuser bypass. MCP bearer token authorization remains a separate mechanism.
 
+## Provision a tenant
+
+Run these operator commands inside the application container (prefix them with
+`bash docker/production.sh exec api-admin-fpm` on the production stack). Hosted
+mode requires `API_ADMIN_HOSTED_MODE=hosted`; the MCP endpoint additionally
+requires `API_ADMIN_HOSTED_MCP_ENABLED=true`.
+
+```bash
+php artisan api-admin:tenant acme --name="Acme"
+php artisan moonshine:user
+php artisan api-admin:tenant-member acme 42
+php artisan api-admin:mcp-token acme --scope=tools:read --scope=tools:generate --name="Acme developer"
+```
+
+1. `api-admin:tenant` creates the tenant and prints its panel URL
+   (`/t/acme/admin`) and MCP endpoint (`/t/acme/api-admin/mcp`). The slug uses
+   lowercase letters, digits and hyphens and starts with a letter. Run it without
+   arguments to list tenants.
+2. `moonshine:user` creates a browser account; grant it membership by numeric ID.
+3. `api-admin:mcp-token` prints a bearer token **once**. Only its SHA-256 hash is
+   stored, so pass it to the developer over a secure channel. Grant the smallest
+   set of scopes they need:
+
+| Scope | Tools |
+|-------|-------|
+| `tools:read` | Services, resources, field catalog, health and probe |
+| `tools:generate` | Service and resource generation and field deltas |
+| `tools:data:read` | Item reads and analytics |
+| `tools:data:write` | Item create, update and delete |
+| `tools:destructive` | `remove_service` and `remove_resource` |
+| `tool:<tool_name>` | One tool, for example `tool:health_check` |
+| `*` | Every hosted tool; use only for trusted automation |
+
+Custom field/component generation and local Eloquent tools stay disabled in
+hosted mode whatever the scope. Manage tokens and tenants later with:
+
+```bash
+php artisan api-admin:mcp-token acme --list
+php artisan api-admin:mcp-token acme --revoke=7
+php artisan api-admin:tenant acme --deactivate
+php artisan api-admin:tenant acme --activate
+```
+
+Listings never show tokens or their hashes. Revocation takes effect on the next
+request. Deactivating a tenant immediately blocks its MCP tokens and browser
+sessions without deleting data; activate it again to restore access.
+
+## Browser memberships
+
 Hosted panels expose REST resources only. Native Eloquent resources, including
 the platform users and roles, are blocked across pages, JSON CRUD and component
 endpoints. Hiding their menu entries is not the authorization boundary. Manage

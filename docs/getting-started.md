@@ -73,16 +73,17 @@ artisan path. Keep only the applicable server. For an installer-managed stack,
 use its generated `.moonshine-install/mcp.json`.
 
 For hosted deployments, the operator supplies a tenant URL such as
-`https://admin.example.com/t/acme/api-admin/mcp` and a tenant-bound bearer token.
-Configure the client's HTTP transport and `Authorization` header. Environment
+`https://admin.example.com/t/acme/api-admin/mcp` and a tenant-bound bearer token
+issued with `php artisan api-admin:mcp-token` (see
+[provisioning](hosted-security.md#provision-a-tenant)). Configure the client's HTTP transport and `Authorization` header. Environment
 variable interpolation is client-specific; do not assume every client expands
 `${API_ADMIN_MCP_TOKEN}`. Hosted clients do not need PHP or this checkout.
 
 ## Browser Onboarding
 
 After signing in to the admin hub, choose **Add service**. The legacy
-`/api-admin/instructor` URL also redirects to the Instructor page inside the
-MoonShine shell.
+`/api-admin/instructor` URL also redirects to this page inside the MoonShine
+shell.
 
 Enter the API base URL, authentication details and representative endpoint paths.
 The instructor probes with GET requests and shows the proposed service and first

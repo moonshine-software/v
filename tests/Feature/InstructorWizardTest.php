@@ -48,7 +48,8 @@ final class InstructorWizardTest extends TestCase
         $this->actingAs($this->user(), 'moonshine')
             ->get($this->instructorPagePath())
             ->assertOk()
-            ->assertSee('Instructor Agent')
+            ->assertSee('Add service')
+            ->assertDontSee('Instructor Agent')
             ->assertSee('API discovery')
             ->assertSee('<option value="bearer"', false)
             ->assertSee('Services');

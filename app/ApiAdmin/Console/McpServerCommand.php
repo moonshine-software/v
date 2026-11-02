@@ -414,7 +414,8 @@ tokens. The local `.mcp.json` should point at the hosted URL and carry only
 that token; it must not include upstream API secrets. Token scopes may allow
 all tools (`*` / `tools:*`) or tool families (`tools:read`,
 `tools:generate`, `tools:data:read`, `tools:data:write`,
-`tools:destructive`).
+`tools:destructive`). Operators issue tokens with `api-admin:mcp-token`;
+there is no MCP tool for tenants or tokens.
 Every tool dispatch also checks the active tenant context. Cross-tenant
 service/resource access is denied even when the token has the requested
 tool-family scope, and generated resources/configs/layouts/spec sidecars
