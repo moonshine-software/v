@@ -474,6 +474,9 @@ Canonical REST microservice flow:
      → detected_columns, guessed_filter_format, guessed_mapping.
      Use method=POST + body for POST-only list/search endpoints; do not
      infer mapping from a GET 405 error body.
+     Hosted POST probes require probe permission plus tools:data:write
+     (or * / tools:*); read-only and individual item-write grants do not
+     permit arbitrary POST probes. Trusted local stdio is unchanged.
      Use the output to finalize response_mapping before create_resource.
   3) create_resource(service, name, endpoint, fields[], list_request?, ...).
      Prefer a singular name ("post"). Singular and plural forms address the

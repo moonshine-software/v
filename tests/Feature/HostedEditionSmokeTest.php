@@ -6,7 +6,11 @@ namespace Tests\Feature;
 
 use App\ApiAdmin\Instructor\InstructorSession;
 use App\ApiAdmin\Instructor\InstructorSessionRepository;
+use App\ApiAdmin\MCP\McpServer;
 use App\ApiAdmin\Providers\ApiAdminServiceProvider;
+use App\ApiAdmin\ServiceConfig\ServiceConfig;
+use App\ApiAdmin\Tenancy\NullTenantResolver;
+use App\ApiAdmin\Tenancy\TenantResolver;
 use App\Models\ApiAdminMcpToken;
 use App\Models\ApiAdminTenant;
 use Illuminate\Database\Schema\Blueprint;
@@ -19,6 +23,7 @@ use Illuminate\Support\Facades\Schema;
 use MoonShine\Laravel\Providers\MoonShineServiceProvider;
 use MoonShine\MultiPanels\Providers\MultiPanelServiceProvider;
 use Orchestra\Testbench\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\ApiAdmin\Concerns\UsesIsolatedProjectRoot;
 
 final class HostedEditionSmokeTest extends TestCase
@@ -118,6 +123,96 @@ final class HostedEditionSmokeTest extends TestCase
         $this->removeIsolatedProjectRoot();
 
         parent::tearDown();
+    }
+
+    /** @return iterable<string, array{list<string>, string|null, bool}> */
+    public static function probePermissions(): iterable
+    {
+        yield 'default GET' => [['tools:read'], null, true];
+        yield 'explicit GET' => [['tools:read'], 'GET', true];
+        yield 'read-only POST' => [['tools:read'], 'POST', false];
+        yield 'lowercase POST' => [['tools:read'], 'post', false];
+        yield 'probe-only POST' => [['tool:probe_endpoint'], 'POST', false];
+        yield 'data-read POST' => [['tools:read', 'tools:data:read'], 'POST', false];
+        yield 'create-only POST' => [['tools:read', 'tool:create_resource_item'], 'POST', false];
+        yield 'write without probe' => [['tools:data:write'], 'POST', false];
+        yield 'read and write POST' => [['tools:read', 'tools:data:write'], 'POST', true];
+        yield 'probe and write POST' => [['tool:probe_endpoint', 'tools:data:write'], 'post', true];
+        yield 'wildcard POST' => [['*'], 'POST', true];
+        yield 'tools wildcard POST' => [['tools:*'], 'POST', true];
+    }
+
+    /** @param list<string> $scopes */
+    #[DataProvider('probePermissions')]
+    public function test_hosted_probe_enforces_method_specific_scopes(array $scopes, ?string $method, bool $allowed): void
+    {
+        $this->createTenantToken('probe-token', 'Acme', $scopes);
+        app()->instance('api-admin.tenant.1.service.blog', ServiceConfig::fromArray([
+            'name' => 'blog', 'tenant_id' => '1', 'base_url' => 'https://blog.test/api',
+            'auth_type' => 'bearer', 'api_key' => 'upstream-probe-secret',
+        ]));
+        Http::preventStrayRequests();
+        Http::fake(['https://blog.test/api/posts' => Http::response([['id' => 42, 'title' => 'Probe']])]);
+        $arguments = ['service' => 'blog', 'path' => '/posts', 'body' => ['title' => 'Probe']];
+        if ($method !== null) {
+            $arguments['method'] = $method;
+        }
+
+        $response = $this->withToken('probe-token')->postJson('/t/acme/api-admin/mcp', [
+            'jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/call',
+            'params' => ['name' => 'probe_endpoint', 'arguments' => $arguments],
+        ])->assertOk()->assertJsonPath('result.isError', ! $allowed);
+        $result = $this->toolPayload($response->json('result.content.0.text'));
+
+        if (! $allowed) {
+            $this->assertSame('MCP_SCOPE_DENIED', $result['code']);
+            Http::assertNothingSent();
+
+            return;
+        }
+
+        $this->assertTrue($result['success']);
+        Http::assertSentCount(1);
+        Http::assertSent(static fn (ClientRequest $request): bool => $request->method() === strtoupper($method ?? 'GET')
+            && $request->hasHeader('Authorization', 'Bearer upstream-probe-secret')
+            && ($request->method() === 'GET' || $request['title'] === 'Probe'));
+    }
+
+    public function test_post_probe_write_permission_does_not_allow_another_tenant_service(): void
+    {
+        $this->createTenantToken('probe-token', 'Acme', ['tools:read', 'tools:data:write']);
+        Http::fake();
+
+        $response = $this->withToken('probe-token')->postJson('/t/acme/api-admin/mcp', [
+            'jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/call',
+            'params' => ['name' => 'probe_endpoint', 'arguments' => [
+                'service' => 'shop', 'path' => '/products', 'method' => 'POST', 'body' => ['name' => 'Probe'],
+            ]],
+        ])->assertOk()->assertJsonPath('result.isError', true);
+
+        $result = $this->toolPayload($response->json('result.content.0.text'));
+        $this->assertSame('MCP_TENANT_DENIED', $result['code']);
+        Http::assertNothingSent();
+    }
+
+    public function test_trusted_local_mcp_keeps_post_rpc_probes_without_token_scopes(): void
+    {
+        config(['api-admin.hosted.mode' => 'local']);
+        app()->instance(TenantResolver::class, new NullTenantResolver);
+        app()->instance('api-admin.tenant.local.service.blog', ServiceConfig::fromArray([
+            'name' => 'blog', 'base_url' => 'https://blog.test/api', 'auth_type' => 'none',
+        ]));
+        Http::preventStrayRequests();
+        Http::fake(['https://blog.test/api/posts/search' => Http::response([['id' => 42]])]);
+
+        $result = new McpServer()->executeTool('probe_endpoint', [
+            'service' => 'blog', 'path' => '/posts/search', 'method' => 'POST', 'body' => ['ids' => [42]],
+        ]);
+
+        $this->assertTrue($result['success']);
+        Http::assertSentCount(1);
+        Http::assertSent(static fn (ClientRequest $request): bool => $request->method() === 'POST'
+            && $request['ids'] === [42]);
     }
 
     public function test_hosted_smoke_covers_provisioning_mcp_health_panel_and_tenant_denial(): void

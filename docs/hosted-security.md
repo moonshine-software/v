@@ -29,13 +29,19 @@ php artisan api-admin:mcp-token acme --scope=tools:read --scope=tools:generate -
 
 | Scope | Tools |
 |-------|-------|
-| `tools:read` | Services, resources, field catalog, health and probe |
+| `tools:read` | Services, resources, field catalog, health and GET probes |
 | `tools:generate` | Service and resource generation and field deltas |
 | `tools:data:read` | Item reads and analytics |
-| `tools:data:write` | Item create, update and delete |
+| `tools:data:write` | Item create, update and delete; additionally required for POST probes |
 | `tools:destructive` | `remove_service` and `remove_resource` |
 | `tool:<tool_name>` | One tool, for example `tool:health_check` |
 | `*` | Every hosted tool; use only for trusted automation |
+
+POST probes require both permission to call `probe_endpoint` (`tools:read` or
+`tool:probe_endpoint`) and `tools:data:write`; `*` / `tools:*` includes both.
+An arbitrary POST endpoint can mutate data even when called for discovery.
+Individual item-write grants do not authorize POST probes. Read-only tokens can
+still probe with GET; trusted local stdio retains POST-RPC discovery.
 
 Custom field/component generation and local Eloquent tools stay disabled in
 hosted mode whatever the scope. Manage tokens and tenants later with:

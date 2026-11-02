@@ -30,6 +30,11 @@ The token may allow `tools:read`, `tools:generate`, `tools:data:read`,
 the tenant boundary: every call is also checked against the active tenant, and
 cross-tenant service/resource access is denied before dispatch.
 
+Hosted POST probes additionally require `tools:data:write` (or `*` / `tools:*`)
+alongside permission to call `probe_endpoint`: arbitrary POST endpoints can
+mutate data. Read-only tokens and `tool:probe_endpoint` alone allow GET probes
+only; individual item-write grants do not authorize POST probes.
+
 ## register_service
 
 Register a new microservice in the admin panel.

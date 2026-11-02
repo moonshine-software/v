@@ -150,6 +150,9 @@ updates the panel branding. Menu items are discovered from resources.
    `guessed_filter_format`, `sample_json`, `hints`.
    Use `method:"POST"` + `body` for POST-only list/search endpoints; a
    GET 405 error body is not a valid response mapping sample.
+   Hosted POST probes additionally require `tools:data:write` (or `*` /
+   `tools:*`); `tools:read` / `tool:probe_endpoint` alone allows GET only.
+   Individual item-write grants do not permit arbitrary POST probes.
    Use the output to finalize `response_mapping` before creating resources.
 3. `create_resource(service, name, endpoint, fields[], list_request?, …)`.
    `list_request: {method:"POST", body:{...}}` makes the Index page and

@@ -105,6 +105,17 @@ final class McpAuthorizationGate
             return McpAuthorizationResult::deny('MCP_SCOPE_DENIED', "Token scope does not allow tool: {$toolName}");
         }
 
+        if ($scopes !== null && $toolName === 'probe_endpoint'
+            && is_string($params['method'] ?? null) && strtoupper($params['method']) === 'POST'
+            && array_intersect(['tools:data:write', 'tools:*', '*'], $scopes) === []) {
+            Log::warning('McpAuthorizationGate: POST probe requires data write scope', [
+                'tenant_id' => $tenant->id,
+                'tool' => $toolName,
+            ]);
+
+            return McpAuthorizationResult::deny('MCP_SCOPE_DENIED', 'POST probes additionally require tools:data:write.');
+        }
+
         if (! $tenant->isLocal && in_array($toolName, [
             'create_field', 'update_field', 'delete_field',
             'create_component', 'update_component', 'delete_component',

@@ -41,7 +41,7 @@ final class ProbeEndpointTool implements ToolContract
     {
         return [
             'name' => 'probe_endpoint',
-            'description' => 'Probe an endpoint through a registered service and return status, sample JSON, headers, timings and a guessed response mapping (Laravel, Django, flat, or custom including Spring Boot pagination). Defaults to GET; set method=POST with body for POST-RPC list/search endpoints.',
+            'description' => 'Probe an endpoint through a registered service and return status, sample JSON, headers, timings and a guessed response mapping (Laravel, Django, flat, or custom including Spring Boot pagination). Defaults to GET; set method=POST with body for POST-RPC list/search endpoints. Hosted POST probes require probe permission plus tools:data:write (or * / tools:*).',
             'inputSchema' => [
                 'type' => 'object',
                 'properties' => [
@@ -60,7 +60,7 @@ final class ProbeEndpointTool implements ToolContract
                     'method' => [
                         'type' => 'string',
                         'enum' => ['GET', 'POST'],
-                        'description' => 'HTTP method for the probe. Defaults to GET. Use POST only for non-mutating POST-RPC list/search endpoints.',
+                        'description' => 'HTTP method for the probe. Defaults to GET. Use POST only for non-mutating POST-RPC list/search endpoints. Hosted POST probes additionally require tools:data:write (or * / tools:*), because arbitrary POST endpoints can mutate data.',
                     ],
                     'body' => [
                         'type' => 'object',

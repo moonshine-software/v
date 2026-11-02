@@ -50,6 +50,11 @@ Hosted tokens grant coarse tool families (`tools:read`, `tools:generate`,
 also checks the active tenant context, so cross-tenant service/resource access
 is denied even when the token has the requested scope.
 
+Hosted `probe_endpoint` calls using POST additionally require `tools:data:write`
+(or `*` / `tools:*`), because arbitrary POST endpoints can mutate data. Probe
+permission is still required; `tools:read` or `tool:probe_endpoint` alone allows
+GET probes only. Individual item-write grants do not permit POST probes.
+
 ## register_service
 
 Creates a new panel for a microservice.

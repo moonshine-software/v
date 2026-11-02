@@ -316,6 +316,8 @@ The generator emits `$indexMethod = 'POST'` and `$indexBody`; `AbstractRestResou
 
 `probe_endpoint` also accepts `method` + `body`; for a POST-only list endpoint always use `probe_endpoint(service, path, method: "POST", body: {...})`, otherwise a GET 405 can produce a garbage `guessed_mapping` from the error body.
 
+Hosted POST probes require permission to call `probe_endpoint` plus `tools:data:write` (or `*` / `tools:*`), because an arbitrary POST endpoint can mutate data. `tools:read` or `tool:probe_endpoint` alone permits GET probes only; individual item-write grants do not authorize POST probes. Trusted local stdio is unchanged.
+
 ### Filter / sort / search param names
 
 Pagination request mapping also accepts `per_page_param_name` (default `per_page`)
@@ -460,7 +462,7 @@ An agent reads them once per session and does not parse the tool schema on every
 | `get_resource` | The latest resource spec from the sidecar (`.ai-factory/specs/<service>/<resource>.json`). Call it before `update_resource`, which does a full replace. `SPEC_MISSING` if there is no sidecar. Read-only. | no |
 | `remove_service` | Full service removal: Configs, Layouts, Resources/{Service}, service and panel entries in the generated registry. Requires `confirm: true`. | **YES** |
 | `remove_resource` | Removes one resource (directory + Pages). Requires `confirm: true`. | **YES** |
-| `probe_endpoint` | Tries a service endpoint with its authorization. GET by default; for POST-only list/search accepts `method: "POST"` + `body`. Returns `{status, headers, sample_json, guessed_mapping, guessed_format, hints, timings_ms}`. | no |
+| `probe_endpoint` | Tries a service endpoint with its authorization. GET by default; for POST-only list/search accepts `method: "POST"` + `body`. Hosted POST additionally requires `tools:data:write` (or `*` / `tools:*`). Returns `{status, headers, sample_json, guessed_mapping, guessed_format, hints, timings_ms}`. | no |
 | `health_check` | Pings the health endpoint of all tenant-visible services (or one through `service`). Returns `{service, tenant_id, status, code, url, latency_ms}` and `diagnostics` (`mode`, tenant id, cache/session/queue/broadcast backends, hosted warnings). | no |
 | `update_resource` | Regenerates an existing resource with a new `fields` spec. Refuses if the resource does not exist (`RESOURCE_NOT_FOUND`, hint → `create_resource`). The current `endpoint` is picked up automatically if not passed. | no (but overwrites files) |
 | `fetch_resource_items` | Fetches a paginated list through `AbstractRestResource::getItems()`, the same code path as the UI. Accepts `filter`, `search`, `sort`, `page`/`per_page`, `cursor`, `parent_context`. Returns `{items, pagination: {strategy, ...}}`. For relation resources (`{parent_id}` in the endpoint) without `parent_context` it responds `RELATION_RESOURCE_REQUIRES_PARENT`. | no |
