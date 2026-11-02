@@ -3,6 +3,7 @@
 > Source: https://github.com/dev-lnk/moonshine-builder (branch: 3.x)
 > Created: 2026-03-27
 > Updated: 2026-03-27
+> Status: historical design inspiration. moonshine-builder is not a dependency, and its `moonshine:build*` commands are not available in this project.
 
 ## Overview
 

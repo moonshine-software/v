@@ -3,6 +3,7 @@
 > Source: vendor/moonshine/moonshine/src/
 > Created: 2026-03-27
 > Updated: 2026-03-27
+> Status: snapshot taken before the MoonShine 5 migration. Check the installed sources in `vendor/moonshine/moonshine/src/` before relying on a class or method listed here.
 
 ## Overview
 

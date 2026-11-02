@@ -8,7 +8,7 @@
 
 MoonShine Multi-Panels is an experimental package for creating multiple independent admin panels within a single MoonShine 4.4+ application. Each panel gets its own URL prefix, layout, color palette, menu, and configuration while sharing the same Laravel application.
 
-**Status:** Experimental Beta — API may change.
+**Status:** the project uses the published `1.0.0`, which supports MoonShine 4.4+ and 5.x. This reference was written against an earlier beta; check `vendor/moonshine/multi-panels` before relying on a detail listed here.
 
 **Requirements:** MoonShine 4.4+, Laravel 10+, PHP 8.2+
 

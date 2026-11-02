@@ -13,7 +13,7 @@ A free, MIT-licensed Laravel application that provides an AI-driven admin panel 
 - MCP server with tools for services, resources, field deltas, data, analytics, introspection and extensions (see `AGENTS.md`)
 - Hosted MCP transport over stateless Streamable HTTP with tenant-bound developer bearer tokens
 - Built-in Instructor Agent: browser onboarding that probes an API, proposes `register_service` + initial `create_resource`, and waits for human confirmation before generation
-- Hot-reload after code generation (composer dump-autoload + cache clear)
+- Hot-reload after code generation: `api-admin:reload` clears caches; `--autoload` additionally runs `composer dump-autoload` for a production classmap
 - Realtime upstream updates via service webhooks, Laravel broadcasting/Reverb, and MoonShine browser refresh metadata
 
 ## Tech Stack
@@ -34,7 +34,7 @@ A free, MIT-licensed Laravel application that provides an AI-driven admin panel 
 - MCP tools generate PHP files (resources, configs, layouts) — not runtime configuration
 - Multi-panels mechanism isolates each microservice into its own admin panel with unique prefix
 - API key propagated through entire chain: ServiceConfig -> HttpClient -> RelationFields
-- Webhook secrets are sourced from `<SERVICE>_WEBHOOK_SECRET`; generated config must not contain literal secret fallbacks
+- Webhook secrets come from `<SERVICE>_WEBHOOK_SECRET` in local/self-hosted mode and from the encrypted `TenantSecretStore` in hosted mode; generated config must not contain literal secret fallbacks
 
 ## Architecture
 See `.ai-factory/ARCHITECTURE.md` for detailed architecture guidelines.

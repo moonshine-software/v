@@ -3,6 +3,7 @@
 > Source: https://github.com/moonshine-software/devkit/tree/4.x/app/MoonShine/RestApi
 > Created: 2026-03-27
 > Updated: 2026-03-27
+> Status: historical reference for MoonShine 4.x, the original prototype of `AbstractRestResource`. The project code and AGENTS.md are the source of truth.
 
 ## Overview
 

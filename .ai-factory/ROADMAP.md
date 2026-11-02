@@ -5,7 +5,7 @@
 ## Milestones
 
 - [x] **REST Admin Foundation** — HTTP-based CRUD resources (`AbstractRestResource`), multi-panel routing, MoonShine UI integration, two-layer validation (Laravel rules + API 422 mapping)
-- [x] **MCP Builder Surface** — 10 tools for service registration (`register_service`, `probe_endpoint`), resource generation (`create_resource`, `update_resource`), layout config (`configure_layout`), removal (`remove_service`, `remove_resource`), and diagnostics (`list_services`, `list_resources`, `health_check`)
+- [x] **MCP Builder Surface** — the initial tool set for service registration (`register_service`, `probe_endpoint`), resource generation (`create_resource`, `update_resource`), layout config (`configure_layout`), removal (`remove_service`, `remove_resource`), and diagnostics (`list_services`, `list_resources`, `health_check`)
 - [x] **Layout + Field Presets** — `Box`/`Tabs`/`Grid` layout trees, per-mode `rules`/`methods` (create vs update), per-resource `detail_strategy` override, password `->raw()`, recursive AST layout
 - [x] **MCP Introspection Surface** — `list_fields`, `describe_field_type`, `list_field_methods`, `list_components` + live JSON resources (`moonshine-v://fields|components|field-methods|llms`)
 - [x] **MCP Runtime Data Surface (read)** — `fetch_resource_items` / `fetch_resource_item` honoring `mutations.*`, per-resource `detail_strategy`, `parent_context` for relations, filter/sort discoverability
