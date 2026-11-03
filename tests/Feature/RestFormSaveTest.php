@@ -129,7 +129,7 @@ final class RestFormSaveTest extends TestCase
         $this->assertStringNotContainsString('private-query-secret', $recorded);
         $this->assertStringNotContainsString('private-response-secret', $recorded);
         $this->assertContains([
-            '[FIX:rest-relations] RestBelongsToMany::'.$operation.' — failed',
+            'RestBelongsToMany::'.$operation.' — failed',
             ['field' => 'tags', 'exception' => $network ? ConnectionException::class : RequestException::class, 'status' => $network ? null : 500],
         ], $logs);
     }

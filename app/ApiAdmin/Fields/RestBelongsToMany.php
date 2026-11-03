@@ -266,7 +266,7 @@ class RestBelongsToMany extends Select
 
             return $bucket;
         } catch (Throwable $e) {
-            Log::error('[FIX:rest-relations] RestBelongsToMany::primeAssociations — failed', [
+            Log::error('RestBelongsToMany::primeAssociations — failed', [
                 'field' => $this->getColumn(),
                 'exception' => $e::class,
                 'status' => $e instanceof RequestException ? $e->response->status() : null,
@@ -389,7 +389,7 @@ class RestBelongsToMany extends Select
 
             return $options;
         } catch (Throwable $e) {
-            Log::error('[FIX:rest-relations] RestBelongsToMany::loadOptions — failed', [
+            Log::error('RestBelongsToMany::loadOptions — failed', [
                 'field' => $this->getColumn(),
                 'exception' => $e::class,
                 'status' => $e instanceof RequestException ? $e->response->status() : null,
@@ -447,7 +447,7 @@ class RestBelongsToMany extends Select
 
             return true;
         } catch (Throwable $e) {
-            Log::error('[FIX:rest-relations] RestBelongsToMany::syncRelation — failed', [
+            Log::error('RestBelongsToMany::syncRelation — failed', [
                 'field' => $this->getColumn(),
                 'exception' => $e::class,
                 'status' => $e instanceof RequestException ? $e->response->status() : null,
@@ -575,7 +575,7 @@ class RestBelongsToMany extends Select
 
             return $ids;
         } catch (Throwable $e) {
-            Log::error('[FIX:rest-relations] RestBelongsToMany::loadCurrentAssociations — failed', [
+            Log::error('RestBelongsToMany::loadCurrentAssociations — failed', [
                 'field' => $this->getColumn(),
                 'exception' => $e::class,
                 'status' => $e instanceof RequestException ? $e->response->status() : null,

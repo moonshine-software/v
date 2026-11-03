@@ -674,7 +674,7 @@ abstract class AbstractRestResource extends CrudResource
             $nextPageUrl = request()->fullUrlWithQuery([$mapping->cursorQueryParam => $nextString]);
         }
 
-        Log::debug('[FIX:rest-pagination] Cursor navigation prepared', [
+        Log::debug('Cursor navigation prepared', [
             'resource' => static::class,
             'query_keys' => array_keys(request()->query()),
             'has_next' => $nextString !== null,
@@ -904,7 +904,7 @@ abstract class AbstractRestResource extends CrudResource
             $field->afterApply($result);
         }
 
-        Log::info('[FIX:rest-save] AbstractRestResource::save — completed', [
+        Log::info('AbstractRestResource::save — completed', [
             'resource' => static::class,
             'result_key' => $result->getKey(),
             'is_new' => $isNew,
