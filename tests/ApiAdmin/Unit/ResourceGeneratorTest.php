@@ -958,8 +958,8 @@ class ResourceGeneratorTest extends TestCase
                 'form' => [
                     'type' => 'tabs',
                     'groups' => [
-                        ['label' => 'Профиль', 'columns' => ['first_name', 'last_name']],
-                        ['label' => 'Доступ', 'columns' => ['password']],
+                        ['label' => 'Profile', 'columns' => ['first_name', 'last_name']],
+                        ['label' => 'Access', 'columns' => ['password']],
                     ],
                 ],
             ],
@@ -970,8 +970,8 @@ class ResourceGeneratorTest extends TestCase
         $this->assertStringContainsString('use MoonShine\\UI\\Components\\Tabs;', $form);
         $this->assertStringContainsString('use MoonShine\\UI\\Components\\Tabs\\Tab;', $form);
         $this->assertStringContainsString('Tabs::make([', $form);
-        $this->assertStringContainsString("Tab::make('Профиль', [", $form);
-        $this->assertStringContainsString("Tab::make('Доступ', [", $form);
+        $this->assertStringContainsString("Tab::make('Profile', [", $form);
+        $this->assertStringContainsString("Tab::make('Access', [", $form);
         // Unlisted column lands in the last tab
         $this->assertStringContainsString("'note'", $form);
         $this->assertSame(0, $this->lintPhp($result['pages']['form']));
@@ -998,8 +998,8 @@ class ResourceGeneratorTest extends TestCase
                 'form' => [
                     'type' => 'two-column',
                     'groups' => [
-                        ['label' => 'Основное', 'span' => 8, 'columns' => ['first_name', 'last_name']],
-                        ['label' => 'Мета', 'span' => 4, 'columns' => ['status', 'telegram']],
+                        ['label' => 'Main', 'span' => 8, 'columns' => ['first_name', 'last_name']],
+                        ['label' => 'Meta', 'span' => 4, 'columns' => ['status', 'telegram']],
                     ],
                 ],
             ],

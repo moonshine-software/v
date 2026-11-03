@@ -108,13 +108,14 @@ final class SpecStoreTest extends TestCase
     public function test_write_uses_pretty_print_with_unicode_and_unescaped_slashes(): void
     {
         SpecStore::write('spec_store_test', 'i18n', [
-            'title' => 'Заголовок',
+            'title' => 'Café menu',
             'endpoint' => '/api/posts',
         ]);
 
         $raw = File::get(SpecStore::path('spec_store_test', 'i18n'));
 
-        $this->assertStringContainsString('Заголовок', $raw);
+        $this->assertStringContainsString('Café menu', $raw);
+        $this->assertStringNotContainsString('\\u00e9', $raw);
         $this->assertStringContainsString('/api/posts', $raw);
         $this->assertStringNotContainsString('\\/', $raw);
         $this->assertStringContainsString("\n    \"", $raw, 'pretty print should produce indented lines');
