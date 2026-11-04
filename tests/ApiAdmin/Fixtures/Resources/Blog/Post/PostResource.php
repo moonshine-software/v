@@ -20,6 +20,9 @@ class PostResource extends MultiPanelRestResource
     #[Override]
     protected string $title = 'Posts';
 
+    #[Override]
+    protected string $sortColumn = 'id';
+
     protected function resolveServiceConfig(): ServiceConfig
     {
         return ApiAdminServiceProvider::resolveService('blog');

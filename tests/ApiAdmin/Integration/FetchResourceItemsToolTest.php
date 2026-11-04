@@ -113,13 +113,13 @@ final class FetchResourceItemsToolTest extends TestCase
             'service' => 'blog',
             'resource' => 'post',
             'filter' => ['status' => 'published'],
-            'sort' => '-created_at',
+            'sort' => '-id',
         ]);
 
         $this->assertTrue($result['success'], (string) json_encode($result));
 
         Http::assertSent(fn (Request $r): bool => str_contains($r->url(), 'filter%5Bstatus%5D=published')
-            && str_contains($r->url(), 'sort=-created_at'));
+            && str_contains($r->url(), 'sort=-id'));
     }
 
     public function test_relation_resource_without_parent_context_errors(): void

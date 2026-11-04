@@ -152,7 +152,7 @@ $steps = [
         'endpoint' => '/products',
         'title' => 'Products',
         'fields' => [
-            ['column' => 'id', 'type' => 'id'],
+            ['column' => 'id', 'type' => 'id', 'methods' => ['sortable']],
             ['column' => 'name', 'type' => 'text', 'methods' => ['sortable', 'required']],
             ['column' => 'sku', 'type' => 'text', 'methods' => ['sortable']],
             ['column' => 'price', 'type' => 'number', 'methods' => ['required']],
