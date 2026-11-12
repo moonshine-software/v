@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Log;
 use MoonShine\Contracts\UI\ComponentContract;
 use MoonShine\Contracts\UI\FieldContract;
 use MoonShine\Contracts\UI\FormBuilderContract;
+use MoonShine\Crud\Contracts\HasFormValidationContract;
 use MoonShine\Support\AlpineJs;
 use MoonShine\Support\Enums\Ability;
 use MoonShine\Support\Enums\JsEvent;
@@ -52,8 +53,12 @@ final class RestHasManyController extends Controller
         // Load existing item for edit
         $item = [];
         if ($isUpdate) {
-            $item = $field->loadSingleItem((string) $key) ?? [];
+            $item = $field->loadSingleItem((string) $key);
+            abort_if($item === null, 404, 'Related item could not be loaded');
         }
+
+        $resource->setItemID($isUpdate ? $key : null);
+        $resource->setItem($isUpdate ? $item : null);
 
         // Build form fields from the related resource
         $formFields = $this->buildFormFields($resource, $isUpdate);
@@ -135,6 +140,7 @@ final class RestHasManyController extends Controller
 
         /** @var array<string, mixed> $data */
         $data = $request->except(['_resource', '_relation', '_parent_id', '_token', '_method']);
+        $data = $this->prepareData($request, $field, $data);
 
         $result = $field->createItemForParent($data, $parentId);
 
@@ -165,6 +171,7 @@ final class RestHasManyController extends Controller
 
         /** @var array<string, mixed> $data */
         $data = $request->except(['_resource', '_relation', '_parent_id', '_key', '_token', '_method']);
+        $data = $this->prepareData($request, $field, $data, $key);
 
         $result = $field->updateItemForParent($data, $key, $parentId);
 
@@ -278,6 +285,35 @@ final class RestHasManyController extends Controller
         }
 
         return array_values($fields);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     *
+     * @return array<string, mixed>
+     */
+    private function prepareData(Request $request, RestHasMany $field, array $data, string|int|null $key = null): array
+    {
+        $resource = $field->getRelatedResource();
+        if (! $resource instanceof AbstractRestResource) {
+            return $data;
+        }
+
+        $item = $key === null ? [] : $field->loadSingleItem($key);
+        abort_if($item === null, 404, 'Related item could not be loaded');
+        $resource->setItemID($key);
+        $resource->setItem($key === null ? null : $item);
+
+        $page = $resource->getFormPage();
+        if ($page instanceof HasFormValidationContract) {
+            $page->prepareForValidation();
+            $request->validate($page->getRules(), $page->validationMessages());
+        }
+
+        $fields = $resource->getFormFields()->onlyFields(withApplyWrappers: true);
+        $fields->fill($item, $resource->getCaster()->cast($item));
+
+        return $resource->applyFields($data, $fields);
     }
 
     private function logResolvedField(Request $request, AbstractRestResource $resource, RestHasMany $field): void

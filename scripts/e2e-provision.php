@@ -42,6 +42,12 @@ if (! is_string($rotationToken) || $rotationToken === '') {
 
 $steps = [
     ['register_service', [
+        'name' => 'mixed', 'panel' => 'mixed-admin', 'title' => 'Mixed API',
+        'base_url' => "http://127.0.0.1:{$ports['links']}", 'api_key' => 'link-pagination-token',
+        'health_path' => '/health', 'response_format' => 'custom',
+        'response_mapping' => ['data_key' => 'data', 'pagination_type' => 'cursor', 'next_cursor_key' => 'cursor.next'],
+    ]],
+    ['register_service', [
         'name' => 'links', 'panel' => 'links-admin', 'title' => 'Link Pagination',
         'base_url' => "http://127.0.0.1:{$ports['links']}", 'api_key' => 'link-pagination-token',
         'health_path' => '/health', 'response_format' => 'custom',
@@ -209,6 +215,72 @@ foreach (['simple', 'numbered'] as $name) {
 
 array_push(
     $steps,
+    ['create_resource', [
+        'service' => 'mixed', 'name' => 'permission', 'title' => 'Mixed Permissions', 'endpoint' => '/mixed/permissions',
+        'actions' => ['view'],
+        'response_mapping' => ['data_key' => '', 'pagination_type' => 'none', 'detail_strategy' => 'list'],
+        'fields' => [['column' => 'id', 'type' => 'id'], ['column' => 'label', 'type' => 'text'], ['column' => 'status', 'type' => 'text']],
+        'search' => ['label'],
+        'filters' => [['column' => 'status', 'type' => 'select', 'options' => $selectOptions]],
+    ]],
+    ['create_resource', [
+        'service' => 'mixed', 'name' => 'setting', 'title' => 'Mixed Settings', 'endpoint' => '/mixed/settings',
+        'actions' => ['view', 'update'],
+        'response_mapping' => ['primary_key' => 'name', 'pagination_type' => 'none', 'detail_strategy' => 'list'],
+        'fields' => [
+            ['column' => 'name', 'type' => 'text', 'methods' => ['readonly']],
+            ['column' => 'label', 'type' => 'text'],
+            ['column' => 'value', 'type' => 'text'],
+        ],
+        'search' => ['label', 'value'],
+    ]],
+);
+
+foreach (['transcription' => 'transcriptions', 'notification' => 'notifications', 'task' => 'tasks'] as $name => $endpoint) {
+    $fields = [
+        ['column' => 'id', 'type' => 'id', 'hide_on' => ['form'], 'methods' => ['sortable']],
+        ['column' => 'title', 'type' => 'text'],
+        ['column' => 'status', 'type' => 'select', 'options' => $selectOptions],
+    ];
+    if ($name === 'task') {
+        $fields[] = ['column' => 'setting_name', 'type' => 'belongs_to', 'endpoint' => '/mixed/settings', 'related_resource' => 'setting', 'label_key' => 'label'];
+        $fields[] = ['column' => 'permission_id', 'type' => 'belongs_to', 'endpoint' => '/mixed/permissions', 'related_resource' => 'permission', 'label_key' => 'label'];
+        $fields[] = ['column' => 'permission_rows', 'type' => 'has_many', 'endpoint' => '/mixed/permissions', 'related_resource' => 'permission', 'hide_on' => ['index', 'detail']];
+        $fields[] = ['column' => 'transcription_rows', 'type' => 'has_many', 'endpoint' => '/mixed/transcriptions', 'related_resource' => 'transcription', 'hide_on' => ['index', 'detail']];
+    }
+    $resource = [
+        'service' => 'mixed', 'name' => $name, 'title' => 'Mixed '.ucfirst($endpoint), 'endpoint' => '/mixed/'.$endpoint,
+        'actions' => $name === 'task' ? ['view', 'update'] : ['view'],
+        'fields' => $fields, 'search' => ['title'],
+        'filters' => [['column' => 'status', 'type' => 'select', 'options' => $selectOptions]],
+    ];
+    if ($name !== 'task') {
+        $resource['response_mapping'] = ['next_cursor_key' => $name === 'transcription' ? 'meta.next_cursor' : 'next_cursor'];
+    }
+    $steps[] = ['create_resource', $resource];
+}
+
+array_push(
+    $steps,
+    ['create_resource', [
+        'service' => 'links', 'name' => 'member', 'endpoint' => '/projects/{parent_id}/members',
+        'detail_strategy' => 'list', 'response_mapping' => ['pagination_type' => 'none'],
+        'fields' => [
+            ['column' => 'id', 'type' => 'id', 'hide_on' => ['form']],
+            ['column' => 'project_role', 'type' => 'select', 'options' => ['admin' => 'Admin', 'member' => 'Member', 'contributor' => 'Contributor'], 'methods' => [['name' => 'default', 'args' => ['contributor']]]],
+            ['column' => 'assignee_id', 'type' => 'belongs_to', 'endpoint' => '/owners', 'methods' => ['nullable']],
+            ['column' => 'model_ids', 'type' => 'json', 'methods' => ['onlyValue']],
+        ],
+    ]],
+    ['create_resource', [
+        'service' => 'links', 'name' => 'nested_project', 'endpoint' => '/projects',
+        'response_mapping' => ['pagination_type' => 'none'],
+        'fields' => [
+            ['column' => 'id', 'type' => 'id', 'hide_on' => ['form']],
+            ['column' => 'title', 'type' => 'text'],
+            ['column' => 'members', 'type' => 'has_many', 'endpoint' => '/projects/{parent_id}/members', 'fields' => [['column' => 'project_role', 'type' => 'text']]],
+        ],
+    ]],
     ['create_resource', [
         'service' => 'links', 'name' => 'save', 'endpoint' => '/save', 'actions' => ['view', 'update'],
         'fields' => [

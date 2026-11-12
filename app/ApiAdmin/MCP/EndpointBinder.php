@@ -32,11 +32,13 @@ final class EndpointBinder
      */
     public static function bind(AbstractRestResource $resource, array $parentContext): array
     {
+        $resource->setEndpointContext($parentContext);
         $endpoint = $resource->getDeclaredEndpoint();
         $placeholders = self::extractPlaceholders($endpoint);
 
         if ($placeholders === []) {
             $resource->setEndpointOverride(null);
+            $resource->setEndpointContext([]);
 
             return [
                 'hadPlaceholders' => false,

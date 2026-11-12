@@ -238,7 +238,27 @@ Generates a REST resource with fields for a specific API endpoint.
 | `endpoint` | string | yes | API endpoint path (e.g., "/api/posts") |
 | `fields` | array | yes | Field definitions (see below) |
 | `title` | string | no | Menu item title (defaults to `name`) |
-| `primary_key` | string | no | Primary key field name (defaults to "id") |
+| `response_mapping` | object | no | Partial override of the service response mapping for this resource; also accepted by `update_resource`. Set `primary_key` inside this object when the identifier differs from the service default. |
+
+For endpoints in one service with different response shapes, keep one service
+and panel and override only the differing keys on each resource:
+
+```json
+{"response_mapping": {"data_key": "", "pagination_type": "none"}}
+```
+
+This reads a bare array. A cursor endpoint can instead use
+`{"response_mapping":{"next_cursor_key":"meta.next_cursor"}}`, and settings
+keyed by name can use `{"response_mapping":{"primary_key":"name"}}`.
+Omitted keys inherit the service mapping; siblings retain their own mapping.
+Top-level `detail_strategy` and `detail_list_key_param` take precedence when
+also supplied.
+
+On `update_resource`, omitting `response_mapping` preserves the resource's saved
+overrides. Explicit `"response_mapping": {}` clears them and restores service
+inheritance. A non-empty mapping replaces the previous override object; keys
+omitted from that object inherit from the service. Other generation settings
+retain the existing full-replace behavior.
 
 **Field definition:**
 
@@ -250,11 +270,23 @@ Generates a REST resource with fields for a specific API endpoint.
 | `methods` | array | no | Chainable field methods such as `["sortable", "required"]` |
 | `endpoint` | string | no | Endpoint for relation fields |
 | `target_service` | string | no | Target service for cross-service relation fields. Omit for same-service relations; relation option loading, has_one/has_many reads, and nested relation actions use the target service config and response mapping. |
-| `value_key` | string | no | Relation value key (defaults to `id`) |
+| `related_resource` | string | no | Existing generated resource name in `target_service` or this service. Links the resource response mapping to all REST relation types, filters and per-page fields. Generate the target first; keep `endpoint` for the relation route. |
+| `value_key` | string | no | Relation value key; inherits the linked resource primary key, or `id` without a link. An explicit value overrides this default. |
 | `label_key` | string | no | Relation label key (defaults to `name`) |
 
 `filters[]` uses the same field shape, including `target_service` for
 cross-service relation filters.
+
+For a lookup whose resource uses `response_mapping.primary_key="name"`, link
+the relation explicitly and omit `value_key` to use those string identifiers:
+
+```json
+{"column":"setting_name","type":"belongs_to","endpoint":"/settings","related_resource":"setting"}
+```
+
+The related resource mapping also governs envelopes and detail reads. Resources
+with no overrides keep the service defaults, and fields without
+`related_resource` retain their existing service-level mapping.
 
 **Cross-service relation example:**
 

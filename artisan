@@ -5,6 +5,7 @@ use Illuminate\Foundation\Application;
 use Symfony\Component\Console\Input\ArgvInput;
 
 define('LARAVEL_START', microtime(true));
+define('MOONSHINE_V_PROCESS_ENV', getenv());
 
 // Register the Composer autoloader...
 require __DIR__.'/vendor/autoload.php';

@@ -48,4 +48,5 @@ class {{ className }} extends AbstractRestResource
 {{ defaultQueryProperty }}
 {{ indexRequestProperty }}
 {{ detailStrategyOverrideMethod }}
+{{ responseMappingProperty }}
 }

@@ -52,6 +52,42 @@ trait HasEndpointQuery
 
     protected ?string $targetService = null;
 
+    protected ?AbstractRestResource $relatedResource = null;
+
+    /** @var class-string<AbstractRestResource>|null */
+    protected ?string $relatedResourceClass = null;
+
+    protected ?string $dataWrapper = null;
+
+    /** @param class-string<AbstractRestResource> $resource */
+    public function relatedResource(string $resource): static
+    {
+        $this->relatedResourceClass = $resource;
+        $this->relatedResource = null;
+
+        return $this;
+    }
+
+    public function getRelatedResource(): ?AbstractRestResource
+    {
+        if ($this->relatedResource === null && $this->relatedResourceClass !== null) {
+            $instance = app($this->relatedResourceClass);
+            $this->relatedResource = $instance instanceof AbstractRestResource ? $instance : null;
+        }
+
+        return $this->relatedResource;
+    }
+
+    public function getRelationTarget(): ?RestRelationTarget
+    {
+        return $this->resolveRelationTarget($this->dataWrapper);
+    }
+
+    public function getRelationPrimaryKey(): string
+    {
+        return $this->getRelationTarget()?->serviceConfig()->responseMapping->primaryKey ?? 'id';
+    }
+
     public function targetService(?string $service): static
     {
         $service = $service === null ? null : trim($service);
@@ -208,19 +244,21 @@ trait HasEndpointQuery
     {
         /** @var array<string, mixed> $item */
         $item = [];
-        if ($this->parentResource !== null) {
+        // Table fields already carry their row; fetching the relation resource has no parent binding.
+        $wrapper = $this->getData();
+        if ($wrapper === null && $this->parentResource !== null) {
             $wrapper = $this->parentResource->getCastedData();
-            if ($wrapper !== null) {
-                $data = $wrapper->getOriginal();
-                if (\is_array($data)) {
+        }
+        if ($wrapper !== null) {
+            $data = $wrapper->getOriginal();
+            if (\is_array($data)) {
+                /** @var array<string, mixed> $item */
+                $item = $data;
+            } elseif (\is_object($data) && \method_exists($data, 'toArray')) {
+                $toArray = $data->toArray();
+                if (\is_array($toArray)) {
                     /** @var array<string, mixed> $item */
-                    $item = $data;
-                } elseif (\is_object($data) && \method_exists($data, 'toArray')) {
-                    $toArray = $data->toArray();
-                    if (\is_array($toArray)) {
-                        /** @var array<string, mixed> $item */
-                        $item = $toArray;
-                    }
+                    $item = $toArray;
                 }
             }
         }
@@ -241,6 +279,7 @@ trait HasEndpointQuery
             parentResource: $this->parentResource,
             targetService: $this->targetService,
             dataWrapper: $dataWrapper,
+            relatedResource: $this->getRelatedResource(),
         );
     }
 

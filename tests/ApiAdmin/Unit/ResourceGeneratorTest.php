@@ -6,14 +6,301 @@ namespace Tests\ApiAdmin\Unit;
 
 use App\ApiAdmin\MCP\Generator\ResourceGenerator;
 use App\ApiAdmin\MCP\ServiceRegistry;
+use App\ApiAdmin\MCP\Tools\CreateResourceTool;
+use App\ApiAdmin\MCP\Tools\GetResourceTool;
+use App\ApiAdmin\MCP\Tools\UpdateResourceTool;
+use App\Models\User;
 use Illuminate\Support\Facades\File;
+use InvalidArgumentException;
 use MoonShine\Contracts\Core\TypeCasts\DataWrapperContract;
 use Orchestra\Testbench\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionMethod;
 use RuntimeException;
 
 class ResourceGeneratorTest extends TestCase
 {
+    /** @return iterable<string, array{string, bool}> */
+    public static function relatedResourceKinds(): iterable
+    {
+        foreach (['belongs_to', 'belongs_to_many', 'has_one', 'has_many'] as $type) {
+            yield $type.' same service' => [$type, false];
+            yield $type.' cross service' => [$type, true];
+        }
+    }
+
+    #[DataProvider('relatedResourceKinds')]
+    public function test_generator_links_registered_related_resource_mapping_on_fields_and_filters(string $type, bool $crossService): void
+    {
+        $generator = new ResourceGenerator;
+        $targetService = $crossService ? 'settings_api' : 'tasky';
+        $target = $generator->generate([
+            'service' => $targetService, 'name' => 'setting', 'endpoint' => '/settings', 'fields' => [],
+            'response_mapping' => ['primary_key' => 'name', 'pagination_type' => 'none'],
+        ]);
+        $originalTarget = File::get($target['file']);
+        $field = [
+            'column' => 'settings', 'type' => $type, 'endpoint' => '/settings', 'related_resource' => 'settings',
+            'fields' => [['column' => 'ignored_inline_child', 'type' => 'text']],
+        ];
+        if ($crossService) {
+            $field['target_service'] = $targetService;
+        }
+        $parent = $generator->generate([
+            'service' => 'tasky', 'name' => 'project', 'endpoint' => '/projects',
+            'fields' => [$field], 'filters' => [$field],
+        ]);
+
+        $expected = '->relatedResource(\\'.$target['class'].'::class)';
+        foreach ($parent['pages'] as $page) {
+            $code = File::get($page);
+            $this->assertStringContainsString($expected, $code);
+            $this->assertStringContainsString("->endpoint('/settings')", $code, 'Explicit linked-resource routes must not become parent-nested endpoints.');
+            $this->assertStringNotContainsString('->valueKey(', $code, 'An omitted value_key must inherit the linked resource primary key.');
+        }
+        $this->assertSame(2, substr_count(File::get($parent['pages']['index']), $expected));
+        $this->assertSame([], $parent['relationResources']);
+        $this->assertSame($originalTarget, File::get($target['file']), 'Explicit targets must not be overwritten by inline child fields.');
+    }
+
+    /** @return iterable<string, array{string, array<string, bool|string>, bool}> */
+    public static function globalHasManyEndpoints(): iterable
+    {
+        foreach ([false, true] as $crossService) {
+            $label = $crossService ? 'cross service' : 'same service';
+            yield 'permissions '.$label => ['permission', ['data_key' => '', 'pagination_type' => 'none'], $crossService];
+            yield 'transcriptions '.$label => ['transcription', ['next_cursor_key' => 'meta.next_cursor'], $crossService];
+        }
+    }
+
+    /** @param array<string, bool|string> $mapping */
+    #[DataProvider('globalHasManyEndpoints')]
+    public function test_linked_has_many_keeps_global_endpoint_and_scope_with_different_response_mappings(string $targetName, array $mapping, bool $crossService): void
+    {
+        $generator = new ResourceGenerator;
+        $service = $crossService ? 'lookups' : 'tasky';
+        $endpoint = '/'.($targetName === 'permission' ? 'permissions' : 'transcriptions');
+        $target = $generator->generate([
+            'service' => $service, 'name' => $targetName, 'endpoint' => $endpoint,
+            'fields' => [], 'response_mapping' => $mapping,
+        ]);
+        $field = [
+            'column' => $targetName, 'type' => 'has_many', 'endpoint' => $endpoint, 'related_resource' => $targetName,
+            'endpoint_query' => ['project_id' => '{id}', 'scope' => 'root'],
+        ];
+        if ($crossService) {
+            $field['target_service'] = $service;
+        }
+        $parent = $generator->generate([
+            'service' => 'tasky', 'name' => 'task', 'endpoint' => '/tasks', 'fields' => [$field],
+        ]);
+
+        foreach ($parent['pages'] as $page) {
+            $code = File::get($page);
+            $this->assertStringContainsString("->endpoint('{$endpoint}')", $code);
+            $this->assertStringContainsString('->relatedResource(\\'.$target['class'].'::class)', $code);
+            $this->assertStringContainsString("->endpointQuery(['project_id' => '{id}', 'scope' => 'root'])", $code);
+            $this->assertStringNotContainsString('/tasks/{parent_id}/', $code);
+        }
+        $this->assertSame(0, $this->lintPhp($parent['pages']['form']));
+    }
+
+    public function test_linked_has_many_preserves_an_explicit_parent_placeholder_endpoint(): void
+    {
+        $generator = new ResourceGenerator;
+        (void) $generator->generate(['service' => 'tasky', 'name' => 'transcription', 'endpoint' => '/transcriptions', 'fields' => []]);
+        $parent = $generator->generate([
+            'service' => 'tasky', 'name' => 'task', 'endpoint' => '/tasks',
+            'fields' => [[
+                'column' => 'transcriptions', 'type' => 'has_many', 'related_resource' => 'transcription',
+                'endpoint' => '/projects/{project_id}/transcriptions',
+            ]],
+        ]);
+
+        $this->assertStringContainsString("->endpoint('/projects/{project_id}/transcriptions')", File::get($parent['pages']['form']));
+    }
+
+    public function test_explicit_id_value_key_overrides_the_related_resource_primary_key_on_fields_and_filters(): void
+    {
+        $generator = new ResourceGenerator;
+        (void) $generator->generate([
+            'service' => 'tasky', 'name' => 'setting', 'endpoint' => '/settings', 'fields' => [],
+            'response_mapping' => ['primary_key' => 'name'],
+        ]);
+        $field = ['column' => 'setting_id', 'type' => 'belongs_to', 'endpoint' => '/settings', 'related_resource' => 'setting', 'value_key' => 'id'];
+        $parent = $generator->generate([
+            'service' => 'tasky', 'name' => 'project', 'endpoint' => '/projects', 'fields' => [$field], 'filters' => [$field],
+        ]);
+
+        $this->assertSame(2, substr_count(File::get($parent['pages']['index']), "->valueKey('id')"));
+        $this->assertStringContainsString("->valueKey('id')", File::get($parent['pages']['form']));
+    }
+
+    public function test_response_mapping_and_related_resource_survive_get_resource_and_regeneration(): void
+    {
+        $generator = new ResourceGenerator;
+        $mapping = ['primary_key' => 'name', 'pagination_type' => 'none', 'detail_strategy' => 'list'];
+        $target = $generator->generate([
+            'service' => 'tasky', 'name' => 'setting', 'endpoint' => '/settings', 'fields' => [], 'response_mapping' => $mapping,
+        ]);
+        $parent = $generator->generate([
+            'service' => 'tasky', 'name' => 'project', 'endpoint' => '/projects',
+            'fields' => [['column' => 'setting', 'type' => 'belongs_to', 'related_resource' => 'setting', 'endpoint' => '/settings']],
+        ]);
+        $targetCode = File::get($target['file']);
+        $parentForm = File::get($parent['pages']['form']);
+        $targetSpec = $this->readResourceSpec('tasky', 'setting');
+        $this->assertSame($mapping, $targetSpec['response_mapping']);
+        $targetRegenerated = $generator->generate([...$targetSpec, 'service' => 'tasky', 'name' => 'setting']);
+        $this->assertSame($targetCode, File::get($targetRegenerated['file']));
+        $parentSpec = $this->readResourceSpec('tasky', 'project');
+        $parentRegenerated = $generator->generate([...$parentSpec, 'service' => 'tasky', 'name' => 'project']);
+        $this->assertSame($parentForm, File::get($parentRegenerated['pages']['form']));
+        $this->assertStringNotContainsString('protected array $responseMapping', File::get($parentRegenerated['file']));
+    }
+
+    /** @return array<string, mixed> */
+    private function readResourceSpec(string $service, string $name): array
+    {
+        $result = new GetResourceTool()->execute(['service' => $service, 'name' => $name]);
+        $this->assertTrue($result['success']);
+        $spec = $result['spec'] ?? null;
+        $this->assertIsArray($spec);
+        $params = [];
+        foreach ($spec as $key => $value) {
+            $this->assertIsString($key);
+            $params[$key] = $value;
+        }
+
+        return $params;
+    }
+
+    public function test_related_resource_uses_the_hosted_tenant_namespace(): void
+    {
+        config(['api-admin.hosted.mode' => 'hosted', 'api-admin.services' => ['tasky' => ['tenant_id' => 'local']]]);
+        $generator = new ResourceGenerator;
+        $target = $generator->generate(['service' => 'tasky', 'name' => 'setting', 'endpoint' => '/settings', 'fields' => []]);
+        $parent = $generator->generate([
+            'service' => 'tasky', 'name' => 'project', 'endpoint' => '/projects',
+            'fields' => [['column' => 'setting', 'type' => 'belongs_to', 'related_resource' => 'setting']],
+        ]);
+
+        $this->assertStringContainsString('\\Tenants\\Local\\Tasky\\Setting\\', $target['class']);
+        $this->assertStringContainsString('->relatedResource(\\'.$target['class'].'::class)', File::get($parent['pages']['form']));
+    }
+
+    public function test_related_resource_schema_is_available_on_every_field_list(): void
+    {
+        foreach ([CreateResourceTool::schema(), UpdateResourceTool::schema()] as $schema) {
+            $input = $schema['inputSchema'] ?? null;
+            $this->assertIsArray($input);
+            $properties = $input['properties'] ?? null;
+            $this->assertIsArray($properties);
+            foreach (['fields', 'index_fields', 'form_fields', 'detail_fields', 'filters'] as $key) {
+                $fieldList = $properties[$key] ?? null;
+                $this->assertIsArray($fieldList);
+                $items = $fieldList['items'] ?? null;
+                $this->assertIsArray($items);
+                $fieldProperties = $items['properties'] ?? null;
+                $this->assertIsArray($fieldProperties);
+                $this->assertArrayHasKey('related_resource', $fieldProperties);
+            }
+        }
+    }
+
+    /** @return iterable<string, array{mixed}> */
+    public static function invalidRelatedResources(): iterable
+    {
+        yield 'arbitrary class' => [User::class];
+        yield 'path traversal' => ['../setting'];
+        yield 'PHP source' => ["setting'); phpinfo(); ('"];
+        yield 'missing resource' => ['not_generated'];
+        yield 'wrong type' => [[]];
+    }
+
+    #[DataProvider('invalidRelatedResources')]
+    public function test_related_resource_requires_a_registered_resource_name(mixed $name): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        (void) new ResourceGenerator()->generate([
+            'service' => 'tasky', 'name' => 'project', 'endpoint' => '/projects',
+            'fields' => [['column' => 'setting', 'type' => 'belongs_to', 'related_resource' => $name]],
+        ]);
+    }
+
+    /** @param array<string, bool|string> $mapping */
+    #[DataProvider('responseMappings')]
+    public function test_generator_emits_partial_response_mapping_for_main_and_relation_resources(array $mapping, string $endpoint): void
+    {
+        $result = new ResourceGenerator()->generate([
+            'service' => 'mapping',
+            'name' => 'record',
+            'endpoint' => $endpoint,
+            'fields' => [['column' => 'name', 'type' => 'text']],
+            'response_mapping' => $mapping,
+        ]);
+
+        $code = File::get($result['file']);
+        $this->assertStringContainsString('protected array $responseMapping = [', $code);
+        foreach ($mapping as $key => $value) {
+            $this->assertStringContainsString("'{$key}' => ".var_export($value, true), $code);
+        }
+        $this->assertStringNotContainsString('current_page_key', $code, 'Overrides must remain partial so siblings and service defaults are preserved.');
+        $this->assertStringNotContainsString('{{ responseMappingProperty }}', $code);
+    }
+
+    /** @return iterable<string, array{array<string, bool|string>, string}> */
+    public static function responseMappings(): iterable
+    {
+        yield 'bare array' => [['data_key' => '', 'pagination_type' => 'none'], '/permissions'];
+        yield 'nested cursor on relation' => [['next_cursor_key' => 'meta.next_cursor', 'supports_sorting' => false], '/projects/{parent_id}/logs'];
+        yield 'name primary key' => [['primary_key' => 'name'], '/settings'];
+    }
+
+    public function test_response_mapping_schema_is_available_to_create_and_update(): void
+    {
+        $create = CreateResourceTool::schema()['inputSchema']['properties']['response_mapping'] ?? null;
+        $updateInput = UpdateResourceTool::schema()['inputSchema'] ?? null;
+        $this->assertIsArray($updateInput);
+        $updateProperties = $updateInput['properties'] ?? null;
+        $this->assertIsArray($updateProperties);
+        $update = $updateProperties['response_mapping'] ?? null;
+
+        $this->assertIsArray($create);
+        $this->assertIsArray($update);
+        $updateDescription = $update['description'] ?? null;
+        $this->assertIsString($updateDescription);
+        $this->assertStringContainsString('Omit to preserve', $updateDescription);
+        unset($create['description'], $update['description']);
+        $this->assertSame($create, $update);
+        $properties = $create['properties'] ?? null;
+        $this->assertIsArray($properties);
+        $this->assertArrayHasKey('primary_key', $properties);
+        $this->assertArrayHasKey('data_key', $properties);
+        $this->assertArrayHasKey('next_cursor_key', $properties);
+    }
+
+    /** @param array<string, mixed>|string $mapping */
+    #[DataProvider('invalidResponseMappings')]
+    public function test_generator_rejects_invalid_response_mapping(array|string $mapping): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        (void) new ResourceGenerator()->generate([
+            'service' => 'mapping', 'name' => 'record', 'endpoint' => '/records',
+            'fields' => [], 'response_mapping' => $mapping,
+        ]);
+    }
+
+    /** @return iterable<string, array{array<string, mixed>|string}> */
+    public static function invalidResponseMappings(): iterable
+    {
+        yield 'scalar' => ['data'];
+        yield 'unknown key' => [['data_path' => 'data']];
+        yield 'wrong scalar type' => [['primary_key' => 7]];
+        yield 'wrong boolean type' => [['supports_sorting' => 'false']];
+        yield 'unknown pagination' => [['pagination_type' => 'offset']];
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -880,7 +1167,7 @@ class ResourceGeneratorTest extends TestCase
         );
         // endpoint_query is emitted as a literal array, not dropped.
         $this->assertStringContainsString(
-            "RestBelongsTo::make('Status', 'status_id')->endpoint('/statuses')->endpointQuery(['for_entity' => 'project']),",
+            "RestBelongsTo::make('Status', 'status_id')->endpoint('/statuses')->valueKey('id')->endpointQuery(['for_entity' => 'project']),",
             $index,
         );
         // label_key override is emitted when it differs from the default.

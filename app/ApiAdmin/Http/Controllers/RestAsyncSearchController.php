@@ -5,15 +5,16 @@ declare(strict_types=1);
 namespace App\ApiAdmin\Http\Controllers;
 
 use App\ApiAdmin\Fields\RestBelongsTo;
+use App\ApiAdmin\Fields\RestRelationTarget;
 use App\ApiAdmin\Http\AsyncSearchContext;
 use App\ApiAdmin\Http\RestEndpointAuthorization;
-use App\ApiAdmin\Providers\ApiAdminServiceProvider;
 use App\ApiAdmin\Resources\AbstractRestResource;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use MoonShine\Crud\Contracts\HasFiltersContract;
 use MoonShine\Support\Enums\Ability;
 use Throwable;
 
@@ -42,16 +43,15 @@ class RestAsyncSearchController
             abort_if($request->query->has($override), 422, 'Search configuration is server controlled');
         }
         $context = AsyncSearchContext::decode($field, $request->query('_context'));
-        $serviceName = $field->getTargetService() ?? $resource->getServiceConfig()->name;
-        $serviceConfig = $serviceName === $resource->getServiceConfig()->name
-            ? $resource->getServiceConfig()
-            : ApiAdminServiceProvider::resolveService($serviceName);
+        $target = $field->getRelationTarget();
+        abort_unless($target instanceof RestRelationTarget, 404, 'Related service is unavailable');
+        $serviceConfig = $target->serviceConfig();
+        $serviceName = $target->targetService();
         $authorization->authenticate($request, $serviceConfig);
         $endpoint = $field->resolveSearchEndpoint($context);
         abort_unless(is_string($endpoint) && $endpoint !== '', 422, 'Missing search scope');
         $valueKey = $field->getValueKey();
         $labelKey = $field->getLabelKey();
-        $dataWrapper = $field->getDataWrapper();
         foreach ($field->getEndpointQuery() as $scope) {
             if (is_string($scope) && preg_match('/^\{([a-zA-Z_]\w*)\}$/', $scope, $match) === 1) {
                 abort_unless(isset($context[$match[1]]) && $context[$match[1]] !== '', 422, 'Missing search scope');
@@ -73,7 +73,7 @@ class RestAsyncSearchController
         ]);
 
         try {
-            $response = $serviceConfig->httpClient()
+            $response = $target->httpClient()
                 ->timeout(15)
                 ->get($endpoint, $endpointQuery);
 
@@ -81,7 +81,7 @@ class RestAsyncSearchController
 
             $json = $response->json();
 
-            $wrapperKey = $dataWrapper ?? $serviceConfig->responseMapping->dataKey;
+            $wrapperKey = $target->dataWrapper();
             $items = data_get($json, $wrapperKey, $json);
 
             if (! is_array($items)) {
@@ -157,7 +157,15 @@ class RestAsyncSearchController
             abort(404, 'Unknown search field');
         }
 
-        $fields = $resource->getFormFields(withOutside: true)->onlyFields();
+        $scope = $request->query('_field_scope', 'form');
+        abort_unless(in_array($scope, ['form', 'filter'], true), 422, 'Unknown field scope');
+        if ($scope === 'filter') {
+            $page = $resource->getIndexPage();
+            abort_unless($page instanceof HasFiltersContract, 404, 'Unknown search filter');
+            $fields = $page->getFilters()->onlyFields();
+        } else {
+            $fields = $resource->getFormFields(withOutside: true)->onlyFields();
+        }
         foreach ($fields as $field) {
             if ($field instanceof RestBelongsTo && $field->getColumn() === $relation) {
                 $field->resource($resource);

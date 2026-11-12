@@ -113,8 +113,9 @@ final class CreateResourceTool implements ToolContract
                                 ],
                                 'value_key' => [
                                     'type' => 'string',
-                                    'description' => 'Value key for relation fields (default: id)',
+                                    'description' => 'Value key for belongs_to / belongs_to_many. Omit to inherit related_resource response_mapping.primary_key, or id when no related resource is linked. An explicit id overrides a different target primary key.',
                                 ],
+                                'related_resource' => self::relatedResourceSchema(),
                                 'label_key' => [
                                     'type' => 'string',
                                     'description' => 'Label key for relation fields (default: name)',
@@ -154,6 +155,7 @@ final class CreateResourceTool implements ToolContract
                             ],
                         ],
                     ],
+                    'response_mapping' => self::responseMappingSchema(),
                     'list_request' => [
                         'type' => 'object',
                         'description' => 'Override how the Index page and fetch_resource_items read the list endpoint. Default is GET with params in query string. Use `{"method":"POST","body":{...}}` for POST-RPC/list/search APIs that require a JSON body. For POST, static `body` is sent first and runtime pagination/search/sort/filter/detail-list params are merged on top. If a static body key is a list (e.g. `{"ids":[]}`) and a runtime detail filter supplies a scalar id, it is wrapped to `{"ids":[id]}`. This only controls list reads; create/update/delete still use `mutations` or REST defaults.',
@@ -286,8 +288,9 @@ final class CreateResourceTool implements ToolContract
                                 ],
                                 'value_key' => [
                                     'type' => 'string',
-                                    'description' => 'Value key for relation filters (default: id).',
+                                    'description' => 'Value key for relation filters; omit to inherit the linked related_resource primary key, or id when no resource is linked.',
                                 ],
+                                'related_resource' => self::relatedResourceSchema(),
                                 'label_key' => [
                                     'type' => 'string',
                                     'description' => 'Label key for relation filters (default: name).',
@@ -302,6 +305,26 @@ final class CreateResourceTool implements ToolContract
                 ],
                 'required' => ['service', 'name', 'endpoint', 'fields'],
             ],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private static function responseMappingSchema(): array
+    {
+        $mapping = RegisterServiceTool::schema()['inputSchema']['properties']['response_mapping'] ?? [];
+        /** @var array<string, mixed> $schema */
+        $schema = is_array($mapping) ? $mapping : [];
+        $schema['description'] = 'Partial resource-level response mapping overrides, merged over the service mapping. Use data_key="" and pagination_type="none" for a bare array; next_cursor_key="meta.next_cursor" for a different cursor envelope; primary_key="name" for settings. Sibling resources keep their service defaults and no extra service/panel is needed. Top-level detail_strategy/detail_list_key_param overrides take precedence when also supplied.';
+
+        return $schema;
+    }
+
+    /** @return array<string, string> */
+    private static function relatedResourceSchema(): array
+    {
+        return [
+            'type' => 'string',
+            'description' => 'Existing generated REST resource name within target_service, or this service when target_service is omitted. Links belongs_to / belongs_to_many / has_one / has_many to the target resource response_mapping (envelope, primary key, detail and pagination strategies). Generate the target resource first. Keep endpoint for the relation route; this is a resource name, not a PHP class or endpoint guess.',
         ];
     }
 
@@ -329,6 +352,7 @@ final class CreateResourceTool implements ToolContract
                     'methods' => ['description' => 'Same as fields[].methods (flat list or per-mode map).'],
                     'endpoint' => ['type' => 'string', 'description' => 'Same as fields[].endpoint for relation fields.'],
                     'target_service' => ['type' => 'string', 'description' => 'Same as fields[].target_service for cross-service relation fields.'],
+                    'related_resource' => self::relatedResourceSchema(),
                     'value_key' => ['type' => 'string', 'description' => 'Same as fields[].value_key for relation fields.'],
                     'label_key' => ['type' => 'string', 'description' => 'Same as fields[].label_key for relation fields.'],
                     'endpoint_query' => ['type' => 'object', 'description' => 'Same as fields[].endpoint_query for relation fields.'],

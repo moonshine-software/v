@@ -11,6 +11,7 @@ use App\ApiAdmin\Tenancy\TenantContext;
 use App\ApiAdmin\Tenancy\TenantKeyBuilder;
 use App\ApiAdmin\Tenancy\TenantRoutes;
 use App\ApiAdmin\TypeCasts\ConfigurableApiCaster;
+use App\ApiAdmin\Validation\ApiErrorMapper;
 use Closure;
 use GuzzleHttp\Psr7\Response as GuzzlePsr7Response;
 use Illuminate\Contracts\Pagination\CursorPaginator;
@@ -136,6 +137,11 @@ abstract class AbstractRestResource extends CrudResource
      */
     protected array $indexBody = [];
 
+    /** @var array<string, bool|string> */
+    protected array $responseMapping = [];
+
+    private ?ServiceConfig $baseServiceConfig = null;
+
     private ?ServiceConfig $resolvedServiceConfig = null;
 
     /**
@@ -145,6 +151,9 @@ abstract class AbstractRestResource extends CrudResource
      * and cleared after the call returns.
      */
     private ?string $endpointOverride = null;
+
+    /** @var array<string, scalar|null> */
+    private array $endpointContext = [];
 
     /**
      * Return the ServiceConfig for this resource's microservice.
@@ -175,6 +184,12 @@ abstract class AbstractRestResource extends CrudResource
         $this->endpointOverride = $endpoint;
     }
 
+    /** @param array<string, scalar|null> $context */
+    public function setEndpointContext(array $context): void
+    {
+        $this->endpointContext = $context;
+    }
+
     /**
      * Return the raw declared endpoint (ignores the runtime override).
      * Used by EndpointBinder to detect placeholders before substitution.
@@ -202,6 +217,11 @@ abstract class AbstractRestResource extends CrudResource
         return null;
     }
 
+    public function getDetailStrategy(): string
+    {
+        return $this->getDetailStrategyOverride() ?? $this->getServiceConfig()->responseMapping->detailStrategy;
+    }
+
     /**
      * Optional resource-level override for the service's
      * detail_list_key_param. Only consulted when the effective detail
@@ -214,6 +234,11 @@ abstract class AbstractRestResource extends CrudResource
     protected function getDetailListKeyParamOverride(): ?string
     {
         return null;
+    }
+
+    public function getDetailListKeyParam(): string
+    {
+        return $this->getDetailListKeyParamOverride() ?? $this->getServiceConfig()->responseMapping->detailListKeyParam;
     }
 
     /**
@@ -241,7 +266,12 @@ abstract class AbstractRestResource extends CrudResource
     public function getServiceConfig(): ServiceConfig
     {
         if (! $this->resolvedServiceConfig instanceof ServiceConfig) {
-            $this->resolvedServiceConfig = $this->resolveServiceConfig();
+            $service = $this->getBaseServiceConfig();
+            $this->resolvedServiceConfig = $this->responseMapping === []
+                ? $service
+                : ServiceConfig::fromArray(array_replace($service->toArray(), [
+                    'response_mapping' => array_replace($service->responseMapping->toArray(), $this->responseMapping),
+                ]));
 
             Log::debug('AbstractRestResource: resolved service config', [
                 'resource' => static::class,
@@ -251,6 +281,11 @@ abstract class AbstractRestResource extends CrudResource
         }
 
         return $this->resolvedServiceConfig;
+    }
+
+    public function getBaseServiceConfig(): ServiceConfig
+    {
+        return $this->baseServiceConfig ??= $this->resolveServiceConfig();
     }
 
     /**
@@ -493,8 +528,10 @@ abstract class AbstractRestResource extends CrudResource
 
     /**
      * Fetch a single item by ID via HTTP GET.
+     *
+     * @param array<string, mixed> $detailQuery
      */
-    public function findItem(bool $orFail = false): ?DataWrapperContract
+    public function findItem(bool $orFail = false, array $detailQuery = []): ?DataWrapperContract
     {
         $this->guardAgainstUnresolvedEndpoint();
 
@@ -518,9 +555,10 @@ abstract class AbstractRestResource extends CrudResource
             return null;
         }
 
-        $detailQuery = is_array($this->defaultQuery['detail'] ?? null)
+        $defaultDetailQuery = is_array($this->defaultQuery['detail'] ?? null)
             ? $this->defaultQuery['detail']
             : [];
+        $detailQuery = array_replace($defaultDetailQuery, $detailQuery);
 
         $mapping = $this->getServiceConfig()->responseMapping;
 
@@ -884,6 +922,7 @@ abstract class AbstractRestResource extends CrudResource
         if (! $isNew && $this->hasUpdateMutations()) {
             $responseData = $this->fetchCanonicalItemData($itemKey);
         } else {
+            app(ApiErrorMapper::class)->handleResponse($response);
             $response->throw();
             $responseData = $this->extractItemData($response);
         }
@@ -1051,6 +1090,7 @@ abstract class AbstractRestResource extends CrudResource
                 if ($response->failed()) {
                     $ignored = $mutation['ignore_status'] ?? [];
                     if (! is_array($ignored) || ! in_array($response->status(), $ignored, true)) {
+                        app(ApiErrorMapper::class)->handleResponse($response);
                         $response->throw();
                     }
                 }
@@ -1150,14 +1190,14 @@ abstract class AbstractRestResource extends CrudResource
             ? $spec['path']
             : $this->resolvedEndpoint();
 
-        $substitutions = $data;
+        $substitutions = array_replace($data, $this->endpointContext);
         if ($key !== null) {
             $substitutions['id'] = $key;
         }
 
         $path = $this->substitutePlaceholders($path, $substitutions, path: true);
 
-        $body = $this->projectMutationBody($spec, $data);
+        $body = $this->projectMutationBody($spec, $data, $substitutions);
 
         if ($method === 'get' || $method === 'delete') {
             return $this->httpClient()->{$method}($path);
@@ -1174,10 +1214,11 @@ abstract class AbstractRestResource extends CrudResource
      *
      * @param array<string, mixed> $spec
      * @param array<string, mixed> $data
+     * @param array<string, mixed> $substitutions
      *
      * @return array<string, mixed>
      */
-    private function projectMutationBody(array $spec, array $data): array
+    private function projectMutationBody(array $spec, array $data, array $substitutions): array
     {
         if (isset($spec['body']) && is_array($spec['body'])) {
             $out = [];
@@ -1185,7 +1226,7 @@ abstract class AbstractRestResource extends CrudResource
                 if (! is_string($k)) {
                     continue;
                 }
-                $out[$k] = is_string($v) ? $this->substitutePlaceholders($v, $data) : $v;
+                $out[$k] = is_string($v) ? $this->substitutePlaceholders($v, $substitutions) : $v;
             }
 
             return $out;
@@ -1806,7 +1847,7 @@ abstract class AbstractRestResource extends CrudResource
      *
      * @return array<string, mixed>
      */
-    protected function applyFields(array $data, FieldsContract $fields): array
+    public function applyFields(array $data, FieldsContract $fields): array
     {
         Log::debug('AbstractRestResource::applyFields', [
             'resource' => static::class,

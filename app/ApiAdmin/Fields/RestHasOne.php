@@ -7,9 +7,12 @@ namespace App\ApiAdmin\Fields;
 use App\ApiAdmin\Fields\Concerns\AsRestRelationField;
 use App\ApiAdmin\Resources\AbstractRestResource;
 use App\ApiAdmin\Tenancy\TenantRoutes;
+use App\ApiAdmin\Validation\ApiErrorMapper;
 use Closure;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use MoonShine\Contracts\Core\TypeCasts\DataCasterContract;
 use MoonShine\Contracts\Core\TypeCasts\DataWrapperContract;
 use MoonShine\Contracts\UI\ActionButtonContract;
@@ -63,14 +66,7 @@ class RestHasOne extends Field implements RelationFieldContract
 
     protected string $parentKeyParam = 'parent_id';
 
-    protected ?string $dataWrapper = null;
-
     protected ?AbstractRestResource $parentResource = null;
-
-    protected ?AbstractRestResource $relatedResource = null;
-
-    /** @var class-string<AbstractRestResource>|null */
-    protected ?string $relatedResourceClass = null;
 
     protected bool $isCreatable = false;
 
@@ -202,16 +198,6 @@ class RestHasOne extends Field implements RelationFieldContract
         return $this->apiEndpoint;
     }
 
-    public function getRelatedResource(): ?AbstractRestResource
-    {
-        if (! $this->relatedResource instanceof AbstractRestResource && $this->relatedResourceClass !== null) {
-            $instance = app($this->relatedResourceClass);
-            $this->relatedResource = $instance instanceof AbstractRestResource ? $instance : null;
-        }
-
-        return $this->relatedResource;
-    }
-
     public function getParentResource(): ?AbstractRestResource
     {
         return $this->parentResource;
@@ -322,8 +308,8 @@ class RestHasOne extends Field implements RelationFieldContract
         } catch (Throwable $e) {
             Log::error('RestHasOne::loadItem — failed', [
                 'field' => $this->getColumn(),
-                'endpoint' => $endpoint,
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
             ]);
 
             return null;
@@ -349,20 +335,26 @@ class RestHasOne extends Field implements RelationFieldContract
 
         try {
             $response = $target->httpClient()->post($endpoint, $data);
+            app(ApiErrorMapper::class)->handleResponse($response);
             $response->throw();
 
             $body = $response->json();
 
             if (! is_array($body)) {
-                return null;
+                Log::debug('[FIX] RestHasOne create succeeded without item JSON', ['status' => $response->status()]);
+
+                return $response->successful() ? $data : null;
             }
 
             /** @var array<string, mixed> $body */
             return $body;
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (Throwable $e) {
             Log::error('RestHasOne::createItemForParent — failed', [
                 'field' => $this->getColumn(),
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
             ]);
 
             return null;
@@ -388,20 +380,26 @@ class RestHasOne extends Field implements RelationFieldContract
 
         try {
             $response = $target->httpClient()->put($endpoint, $data);
+            app(ApiErrorMapper::class)->handleResponse($response);
             $response->throw();
 
             $body = $response->json();
 
             if (! is_array($body)) {
-                return null;
+                Log::debug('[FIX] RestHasOne update succeeded without item JSON', ['status' => $response->status()]);
+
+                return $response->successful() ? $data : null;
             }
 
             /** @var array<string, mixed> $body */
             return $body;
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (Throwable $e) {
             Log::error('RestHasOne::updateItemForParent — failed', [
                 'field' => $this->getColumn(),
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
             ]);
 
             return null;
@@ -430,7 +428,8 @@ class RestHasOne extends Field implements RelationFieldContract
         } catch (Throwable $e) {
             Log::error('RestHasOne::deleteItemForParent — failed', [
                 'field' => $this->getColumn(),
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
             ]);
 
             return false;
@@ -501,6 +500,12 @@ class RestHasOne extends Field implements RelationFieldContract
         $parentId = $this->getParentId();
         $item = $this->getValue();
         $isUpdate = is_array($item) && $item !== [];
+        $relatedResource = $this->getRelatedResource();
+        if ($relatedResource instanceof AbstractRestResource) {
+            $values = $isUpdate ? $item : [];
+            $relatedResource->setItemID($relatedResource->getCaster()->cast($values)->getKey());
+            $relatedResource->setItem($isUpdate ? $values : null);
+        }
 
         $action = $isUpdate
             ? route('moonshine.rest-has-one.update', [

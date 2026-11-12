@@ -40,11 +40,11 @@ class RestBelongsToMany extends Select
 
     protected string $valueKey = 'id';
 
+    protected bool $hasExplicitValueKey = false;
+
     protected string $labelKey = 'name';
 
     protected string $parentKeyParam = 'parent_id';
-
-    protected ?string $dataWrapper = null;
 
     protected ?AbstractRestResource $parentResource = null;
 
@@ -119,8 +119,16 @@ class RestBelongsToMany extends Select
     public function valueKey(string $key): static
     {
         $this->valueKey = $key;
+        $this->hasExplicitValueKey = true;
 
         return $this;
+    }
+
+    public function getValueKey(): string
+    {
+        return $this->hasExplicitValueKey || $this->relatedResourceClass === null
+            ? $this->valueKey
+            : ($this->getRelationTarget()?->serviceConfig()->responseMapping->primaryKey ?? $this->valueKey);
     }
 
     /**
@@ -371,7 +379,7 @@ class RestBelongsToMany extends Select
             $options = [];
 
             foreach ($items as $item) {
-                $rawValue = data_get($item, $this->valueKey);
+                $rawValue = data_get($item, $this->getValueKey());
                 $rawLabel = data_get($item, $this->labelKey);
                 $value = is_scalar($rawValue) ? (string) $rawValue : '';
                 $label = is_scalar($rawLabel) ? (string) $rawLabel : '';
@@ -560,7 +568,7 @@ class RestBelongsToMany extends Select
 
             $ids = [];
             foreach ($items as $item) {
-                $raw = data_get($item, $this->valueKey);
+                $raw = data_get($item, $this->getValueKey());
                 if (is_scalar($raw)) {
                     $ids[] = (string) $raw;
                 }

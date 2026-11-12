@@ -11,13 +11,15 @@ use App\ApiAdmin\MCP\Tools\ListFieldsTool;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Override;
+use RuntimeException;
 use stdClass;
+use Symfony\Component\Process\Process;
 use Throwable;
 
 class McpServerCommand extends Command
 {
     #[Override]
-    protected $signature = 'api-admin:mcp-server {--debug : Write protocol debug info to STDERR}';
+    protected $signature = 'api-admin:mcp-server {--debug : Write protocol debug info to STDERR} {--once : Internal single-frame tool worker}';
 
     #[Override]
     protected $description = 'Run MCP server over stdio (JSON-RPC) for register_service/create_resource/configure_layout tools';
@@ -104,6 +106,9 @@ class McpServerCommand extends Command
 
             try {
                 if (! $this->handleFrame($server, $line, $debug)) {
+                    break;
+                }
+                if ($this->option('once')) {
                     break;
                 }
             } catch (Throwable $e) {
@@ -275,6 +280,12 @@ class McpServerCommand extends Command
                 return true;
             }
 
+            if (! $this->option('once')) {
+                $this->runToolWorker($line, $id);
+
+                return true;
+            }
+
             /** @var array<string, mixed> $toolArgs */
             $toolArgs = $arguments;
             $result = $server->executeTool($name, $toolArgs);
@@ -304,6 +315,51 @@ class McpServerCommand extends Command
         $this->respondError($id, -32601, "Method not found: {$method}");
 
         return true;
+    }
+
+    private function runToolWorker(string $frame, mixed $id): void
+    {
+        // PHP cannot reload an already declared generated class after update_resource.
+        // Dotenv values inherited through $_ENV would also shadow later .env edits.
+        $environment = [];
+        foreach (array_keys($_ENV + $_SERVER + getenv()) as $name) {
+            if (is_string($name)) {
+                $environment[$name] = false;
+            }
+        }
+        $initialEnvironment = defined('MOONSHINE_V_PROCESS_ENV') ? constant('MOONSHINE_V_PROCESS_ENV') : getenv();
+        if (is_array($initialEnvironment)) {
+            foreach ($initialEnvironment as $name => $value) {
+                if (is_string($name) && is_string($value)) {
+                    $environment[$name] = $value;
+                }
+            }
+        }
+        $worker = new Process(
+            [PHP_BINARY, base_path('artisan'), 'api-admin:mcp-server', '--once'],
+            base_path(),
+            $environment,
+            input: $frame."\n",
+            timeout: 300,
+        );
+
+        try {
+            $worker->mustRun();
+            $response = trim($worker->getOutput());
+            $decoded = json_decode($response, true);
+            if (! is_array($decoded) || ($decoded['id'] ?? null) !== $id
+                || (! array_key_exists('result', $decoded) && ! array_key_exists('error', $decoded))) {
+                throw new RuntimeException('Invalid MCP tool worker response');
+            }
+
+            fwrite(STDOUT, $response."\n");
+        } catch (Throwable $e) {
+            Log::error('[FIX] MCP tool worker failed', [
+                'exception' => $e::class,
+                'exit_code' => $worker->getExitCode(),
+            ]);
+            $this->respondError($id, -32603, 'Tool worker failed');
+        }
     }
 
     /**
@@ -521,8 +577,10 @@ Known gotchas (repeat offenders — scan before debugging):
     contains unreplaced placeholder(s)" when that happens.
   • Schema changes don't reach the agent without reconnect. If a
     param "doesn't exist" but this guide mentions it, reconnect MCP.
-  • update_resource is a FULL replace. Call get_resource(service,
-    name) first when you only want to edit a slice — merge into the
+  • update_resource replaces the full field spec. Omitted response_mapping
+    preserves saved overrides; explicit {} clears them and a non-empty
+    object replaces them. Other settings keep full-replace semantics.
+    Call get_resource(service, name) when editing one slice — merge into the
     returned spec, then pass the merged spec. Resources predating the
     sidecar return SPEC_MISSING; reconstruct from the generated
     *Page.php files or reseed with one full update_resource call.
@@ -622,8 +680,18 @@ Terminology (use these exact keys in tool arguments):
     nested relation actions use the target service config and response
     mapping, not the parent service.
 
+  • fields[].related_resource — existing generated resource name in
+    target_service, or this service when target_service is omitted.
+    Supported by all four REST relation types, filters and per-page field
+    lists. Generate the target first. This links its response_mapping
+    (envelope, primary key, detail and pagination strategies) explicitly;
+    keep endpoint for the relation route. No endpoint guessing or extra
+    service/panel is needed.
+
   • fields[].value_key / fields[].label_key — relation option key
-    overrides (default id / name).
+    overrides. Omitted value_key inherits related_resource's primary key
+    (id without a linked resource); an explicit value_key wins. label_key
+    defaults to name.
 
   • actions — top-level allowlist of CRUD abilities the upstream API
     actually supports: subset of ["create", "view", "update", "delete",
@@ -653,6 +721,14 @@ Terminology (use these exact keys in tool arguments):
     resource through the list filter, siblings keep "endpoint".
     detail_list_key_param overrides the filter key if the list uses a
     non-primary-key filter (e.g. ?status_id=7 vs ?id=7).
+
+  • response_mapping (per-resource, in create_resource / update_resource)
+    partially overrides the service mapping without another service/panel.
+    For bare arrays use data_key: "" + pagination_type: "none";
+    for cursor variants use next_cursor_key: "meta.next_cursor";
+    for settings keyed by name use primary_key: "name".
+    On update, omit response_mapping to keep saved overrides; explicit {}
+    clears them and a non-empty object replaces the old override object.
 
   • rules — validation for the FormPage. Three accepted shapes:
       (1) flat {col: "required|string"} — same for create+update;

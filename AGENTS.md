@@ -287,6 +287,32 @@ A recursive tree (AST) is supported through `layout.form.tree`. Container nodes:
 
 Coverage: `ResourceGeneratorTest::test_generator_emits_tabs_layout_preset`, `test_generator_emits_two_column_layout_preset`, `test_generator_default_layout_unchanged_without_spec`.
 
+### Per-resource response mapping
+
+`create_resource` / `update_resource` accept a partial `response_mapping`, merged
+over the service mapping for that resource only. Use `data_key: ""` with
+`pagination_type: "none"` for a bare list, `next_cursor_key` for a different
+cursor envelope, or `primary_key: "name"` for settings. Browser, MCP data and
+analytics reads share the effective mapping; siblings retain service defaults.
+Top-level `detail_strategy` / `detail_list_key_param` still take precedence.
+`update_resource` retains the saved `response_mapping` when the key is omitted.
+An explicit empty object clears the overrides; an explicit nonempty object
+replaces the override block, with other keys inherited from the service.
+
+Relation fields can reference an already generated target by `related_resource`
+(resource name in `target_service`, or the same service when omitted). This
+reuses the target's effective response mapping and detail strategy without
+changing credentials or creating another panel. An omitted `value_key` on a
+linked Select uses the target primary key; an explicit key/data wrapper wins.
+Unlinked fields use service defaults, never the referring resource's overrides.
+Explicit endpoints on fields with `related_resource` are kept verbatim, including
+global collections such as `/permissions`; only inline generated relations get
+automatic parent nesting.
+Async searches distinguish form fields from index filters, including when the
+same column has different targets on the two pages. Coverage:
+`ResourceRelationMappingTest`, `ResourceMappingWorkflowTest`,
+`ResourceMappingSaveRouteTest`, `resource-mapping.spec.mjs`.
+
 ### Per-resource `detail_strategy` override
 
 `register_service.response_mapping.detail_strategy` (`endpoint` / `list`) is set at the service level and applies to all resources by default. If in a real API **some** resources have `GET /{id}` (users, projects) and **others** only list + CUD (statuses, tags, categories — a typical Laravel lookup with `Route::resource('statuses')->only(['index','store','update','destroy'])`), override it at the resource level:
@@ -454,17 +480,17 @@ An agent reads them once per session and does not parse the tool schema on every
 |---|---|---|
 | `register_service` | Registers a service: Config, Layout, service and panel entries in `storage/api-admin/generated/`. Accepts `response_format: laravel\|django\|flat\|github\|custom` (mapping preset) or an explicit `response_mapping`; `realtime` defines the webhook + browser refresh contract, the recommended broadcaster backend is Laravel Reverb. Omitted secrets are preserved in local/hosted storage; explicit empty strings clear them unless required by the selected auth/realtime mode. Omitting the whole `realtime` object keeps its stored settings. | no |
 | `initialize_local_service` | Registers a local MoonShine panel for Eloquent models (`kind: local`, `driver: eloquent`). Does not accept `base_url`, `api_key`, `response_mapping` or OAuth/session/admin_auth/realtime/health settings; those need `register_service`. | no |
-| `create_resource` | Generates a Resource + three pages for a service. Supports `has_many`/`has_one` with nested resources, `belongs_to_many`, `select` with `options`, `list_request` for POST list/search endpoints. An existing resource wins over the other form of its name: `posts` regenerates `Post` (`ServiceRegistry::resourceBaseName`). | no |
+| `create_resource` | Generates a Resource + three pages for a service. Supports `has_many`/`has_one` with nested resources, `belongs_to_many`, `select` with `options`, `list_request` for POST list/search endpoints and partial per-resource `response_mapping`. An existing resource wins over the other form of its name: `posts` regenerates `Post` (`ServiceRegistry::resourceBaseName`). | no |
 | `create_model_resource` | Generates a native MoonShine `ModelResource` + Pages for a local Eloquent service. Accepts `model`, scalar/UI `fields`, per-page overrides, `rules`, `search`, `actions`, `icon`, `group`. Rejects REST services with `LOCAL_SERVICE_REQUIRED`, missing or non-Eloquent models with `MODEL_NOT_FOUND`. | no |
 | `configure_layout` | Changes panel logos and title. Menu items come from the panel's resources. | no |
 | `list_services` | Array of registered services with `base_url`, `panel`, `auth_type`, `resources_count`, file paths. Read-only. | no |
 | `list_resources` | Array of generated resources (across all services or for one). Read-only. | no |
-| `get_resource` | The latest resource spec from the sidecar (`.ai-factory/specs/<service>/<resource>.json`). Call it before `update_resource`, which does a full replace. `SPEC_MISSING` if there is no sidecar. Read-only. | no |
+| `get_resource` | The latest resource spec from the sidecar (`.ai-factory/specs/<service>/<resource>.json`). Call it before `update_resource` to preserve other metadata; omitted `response_mapping` is retained automatically. `SPEC_MISSING` if there is no sidecar. Read-only. | no |
 | `remove_service` | Full service removal: Configs, Layouts, Resources/{Service}, service and panel entries in the generated registry. Requires `confirm: true`. | **YES** |
 | `remove_resource` | Removes one resource (directory + Pages). Requires `confirm: true`. | **YES** |
 | `probe_endpoint` | Tries a service endpoint with its authorization. GET by default; for POST-only list/search accepts `method: "POST"` + `body`. Hosted POST additionally requires `tools:data:write` (or `*` / `tools:*`). Returns `{status, headers, sample_json, guessed_mapping, guessed_format, hints, timings_ms}`. | no |
 | `health_check` | Pings the health endpoint of all tenant-visible services (or one through `service`). Returns `{service, tenant_id, status, code, url, latency_ms}` and `diagnostics` (`mode`, tenant id, cache/session/queue/broadcast backends, hosted warnings). | no |
-| `update_resource` | Regenerates an existing resource with a new `fields` spec. Refuses if the resource does not exist (`RESOURCE_NOT_FOUND`, hint → `create_resource`). The current `endpoint` is picked up automatically if not passed. | no (but overwrites files) |
+| `update_resource` | Regenerates an existing resource with a new `fields` spec. Refuses if the resource does not exist (`RESOURCE_NOT_FOUND`, hint → `create_resource`). The current `endpoint` is picked up automatically if not passed. Omitted `response_mapping` keeps the saved overrides; explicit empty clears them. | no (but overwrites files) |
 | `fetch_resource_items` | Fetches a paginated list through `AbstractRestResource::getItems()`, the same code path as the UI. Accepts `filter`, `search`, `sort`, `page`/`per_page`, `cursor`, `parent_context`. Returns `{items, pagination: {strategy, ...}}`. For relation resources (`{parent_id}` in the endpoint) without `parent_context` it responds `RELATION_RESOURCE_REQUIRES_PARENT`. | no |
 | `fetch_resource_item` | A single item through `findItem()`; honors the per-resource `detail_strategy` override (endpoint vs list). Accepts `id` + optional `parent_context`. Returns `{item}` with the primary_key guaranteed at the top. `NOT_FOUND` on a 404. | no |
 | `count_resource` | Counts resource records through the same `AbstractRestResource::getItems()` path. Accepts `filter`, `search`, `time_window`, `parent_context`, `per_page`. Prefers the upstream `pagination.total`; for `pagination_type=none` counts materialized items. If the upstream indicates `has_more` without a total it returns `warning: PARTIAL_COUNT`. | no |
@@ -527,6 +553,20 @@ An agent must first make sure no ready primitive exists (`list_fields` + `descri
 ### CRUD on resource items
 
 Data reads (`fetch_resource_items`, `fetch_resource_item`) and data writes (`create_resource_item`, `update_resource_item`, `delete_resource_item`) reach the upstream through the same `AbstractRestResource` methods as the admin UI, that is, on top of `mutations.*` routing, the per-resource `detail_strategy` override and `parent_context` for relation endpoints. All CUD tools respect the `actions` allowlist from the spec sidecar (`.ai-factory/specs/<service>/<resource>.json` key `actions: [view, create, update, delete]`) through `ResourceActionResolver`. If the allowlist forbids an action, the tool returns `ACTION_NOT_ALLOWED` before any network call.
+
+Stdio tool calls run in fresh PHP workers: changing generated classes or service
+configuration must take effect on the next call in the same MCP connection.
+Endpoint binding carries parent context into explicit mutation paths and body
+templates without adding context keys to an otherwise unchanged payload.
+Nested relation edit forms must load the exact item, honor list detail strategy
+and fail instead of showing create defaults on a failed read. Nested saves apply
+fields/rules, preserve upstream 422 field errors, and accept successful empty
+responses without reporting a failed write. Keep resource item state null on
+create; use filled row data for relation-field query context so a nested table
+does not try to fetch an unbound relation resource. Never log raw relation values,
+upstream bodies or exception messages. Coverage: `RestNestedMemberFormTest`,
+`RestNestedOneFormTest`, `RestNestedRowContextTest`, `McpFreshRuntimeTest`,
+`McpMutationContextTest`.
 
 ### Tool response contract
 

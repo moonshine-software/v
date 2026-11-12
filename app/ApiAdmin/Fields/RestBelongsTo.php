@@ -9,7 +9,6 @@ use App\ApiAdmin\Http\AsyncSearchContext;
 use App\ApiAdmin\Http\PathSegment;
 use App\ApiAdmin\Resources\AbstractRestResource;
 use App\ApiAdmin\Tenancy\TenantRoutes;
-use Closure;
 use GuzzleHttp\Psr7\Uri;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
@@ -38,9 +37,9 @@ class RestBelongsTo extends Select
 
     protected string $valueKey = 'id';
 
-    protected string $labelKey = 'name';
+    protected bool $hasExplicitValueKey = false;
 
-    protected ?string $dataWrapper = null;
+    protected string $labelKey = 'name';
 
     protected ?AbstractRestResource $parentResource = null;
 
@@ -84,7 +83,9 @@ class RestBelongsTo extends Select
 
     public function getValueKey(): string
     {
-        return $this->valueKey;
+        return $this->hasExplicitValueKey || $this->relatedResourceClass === null
+            ? $this->valueKey
+            : ($this->getRelationTarget()?->serviceConfig()->responseMapping->primaryKey ?? $this->valueKey);
     }
 
     public function getLabelKey(): string
@@ -123,6 +124,7 @@ class RestBelongsTo extends Select
     public function valueKey(string $key): static
     {
         $this->valueKey = $key;
+        $this->hasExplicitValueKey = true;
 
         return $this;
     }
@@ -201,6 +203,7 @@ class RestBelongsTo extends Select
             ...TenantRoutes::routeParams(),
             '_resource' => $this->parentResource->getUriKey(),
             '_relation' => $this->getColumn(),
+            '_field_scope' => $this->getWrapName() === $this->parentResource->getQueryParamName('filter') ? 'filter' : 'form',
             '_parent_id' => $this->parentResource->getItemID(),
             '_context' => AsyncSearchContext::encode($this, $context),
         ];
@@ -268,7 +271,7 @@ class RestBelongsTo extends Select
             'source_service' => $target->sourceService(),
             'target_service' => $target->targetService(),
             'endpoint' => $endpoint,
-            'value_key' => $this->valueKey,
+            'value_key' => $this->getValueKey(),
             'label_key' => $this->labelKey,
             'query_keys' => array_keys($this->resolveEndpointQuery()),
         ]);
@@ -288,7 +291,7 @@ class RestBelongsTo extends Select
             $options = [];
 
             foreach ($items as $item) {
-                $rawValue = data_get($item, $this->valueKey);
+                $rawValue = data_get($item, $this->getValueKey());
                 $rawLabel = data_get($item, $this->labelKey);
                 $value = is_scalar($rawValue) ? (string) $rawValue : '';
                 $label = is_scalar($rawLabel) ? (string) $rawLabel : '';
@@ -341,7 +344,7 @@ class RestBelongsTo extends Select
             $mapping = $target->serviceConfig()->responseMapping;
             $query = $this->resolveEndpointQuery();
             if ($mapping->detailStrategy === 'list') {
-                $query += [$mapping->detailListKeyParam ?: $this->valueKey => $key];
+                $query += [$mapping->detailListKeyParam ?: $this->getValueKey() => $key];
             } else {
                 $uri = new Uri($endpoint);
                 $endpoint = (string) $uri->withPath(rtrim($uri->getPath(), '/').'/'.PathSegment::encode($key));
@@ -356,7 +359,7 @@ class RestBelongsTo extends Select
                 $items = data_get($json, $wrapper, $json);
                 $items = is_array($items) ? (array_is_list($items) ? $items : [$items]) : [];
                 foreach ($items as $item) {
-                    $id = data_get($item, $this->valueKey);
+                    $id = data_get($item, $this->getValueKey());
                     $label = data_get($item, $this->labelKey);
                     if (is_scalar($id) && (string) $id === $key && is_scalar($label)) {
                         return [$key => (string) $label];
@@ -421,12 +424,12 @@ class RestBelongsTo extends Select
     {
         $raw = parent::toValue($withDefault);
 
-        if (is_array($raw) && ! array_is_list($raw) && isset($raw[$this->valueKey])) {
+        if (is_array($raw) && ! array_is_list($raw) && isset($raw[$this->getValueKey()])) {
             /** @var array<string, mixed> $rawAssoc */
             $rawAssoc = $raw;
             $this->embeddedRecord = $rawAssoc;
 
-            return $rawAssoc[$this->valueKey];
+            return $rawAssoc[$this->getValueKey()];
         }
 
         if (($raw === null || $raw === '') && ($unwrapped = $this->unwrapEmbeddedFromData()) !== null) {
@@ -466,12 +469,12 @@ class RestBelongsTo extends Select
         }
 
         $object = data_get($original, $path);
-        if (is_array($object) && isset($object[$this->valueKey])) {
+        if (is_array($object) && isset($object[$this->getValueKey()])) {
             /** @var array<string, mixed> $objectAssoc */
             $objectAssoc = $object;
             $this->embeddedRecord = $objectAssoc;
 
-            $value = $objectAssoc[$this->valueKey];
+            $value = $objectAssoc[$this->getValueKey()];
             if (is_scalar($value)) {
                 return is_int($value) ? $value : (string) $value;
             }
@@ -558,23 +561,5 @@ class RestBelongsTo extends Select
         }
 
         return e(parent::resolvePreview());
-    }
-
-    /**
-     * Apply the field value during save — sets the foreign key on the item data.
-     */
-    #[Override]
-    protected function resolveOnApply(): ?Closure
-    {
-        return static function (mixed $item, mixed $value, self $field): mixed {
-            Log::debug('RestBelongsTo::resolveOnApply', [
-                'field' => $field->getColumn(),
-                'value' => $value,
-            ]);
-
-            data_set($item, $field->getColumn(), $value);
-
-            return $item;
-        };
     }
 }

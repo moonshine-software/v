@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
+use MoonShine\Crud\Contracts\HasFormValidationContract;
 use MoonShine\Support\Enums\Ability;
 
 /**
@@ -32,6 +33,7 @@ final class RestHasOneController extends Controller
 
         /** @var array<string, mixed> $data */
         $data = $request->except(['_resource', '_relation', '_parent_id', '_token', '_method']);
+        $data = $this->prepareData($request, $field, $data);
 
         $result = $field->createItemForParent($data, $parentId);
 
@@ -56,6 +58,7 @@ final class RestHasOneController extends Controller
 
         /** @var array<string, mixed> $data */
         $data = $request->except(['_resource', '_relation', '_parent_id', '_token', '_method']);
+        $data = $this->prepareData($request, $field, $data, true);
 
         $result = $field->updateItemForParent($data, $parentId);
 
@@ -141,6 +144,36 @@ final class RestHasOneController extends Controller
         $raw = $request->input('_parent_id');
 
         return is_string($raw) || is_int($raw) ? $raw : null;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     *
+     * @return array<string, mixed>
+     */
+    private function prepareData(Request $request, RestHasOne $field, array $data, bool $isUpdate = false): array
+    {
+        $resource = $field->getRelatedResource();
+        if (! $resource instanceof AbstractRestResource) {
+            return $data;
+        }
+
+        $item = $isUpdate ? $field->loadItem() : [];
+        abort_if($item === null, 404, 'Related item could not be loaded');
+        $casted = $resource->getCaster()->cast($item);
+        $resource->setItemID($casted->getKey());
+        $resource->setItem($isUpdate ? $item : null);
+
+        $page = $resource->getFormPage();
+        if ($page instanceof HasFormValidationContract) {
+            $page->prepareForValidation();
+            $request->validate($page->getRules(), $page->validationMessages());
+        }
+
+        $fields = $resource->getFormFields()->onlyFields(withApplyWrappers: true);
+        $fields->fill($item, $casted);
+
+        return $resource->applyFields($data, $fields);
     }
 
     private function logResolvedField(Request $request, AbstractRestResource $resource, RestHasOne $field): void

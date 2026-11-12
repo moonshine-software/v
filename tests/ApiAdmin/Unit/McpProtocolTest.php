@@ -115,6 +115,7 @@ final class McpProtocolTest extends TestCase
             'instructor_status',
             'target_service',
             'list_request',
+            'response_mapping',
         ];
         foreach ($needles as $needle) {
             $this->assertStringContainsString(

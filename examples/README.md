@@ -81,6 +81,7 @@ Endpoints:
 - `GET /sanctum/csrf-cookie` — bootstrap, sets the `XSRF-TOKEN` + `sanctum_session` cookies.
 - `POST /login` — requires the `X-XSRF-TOKEN` header + cookie. Body is JSON `{email, password}`.
 - `GET /me` / `GET /posts` — protected, need the cookie + `X-XSRF-TOKEN`. CSRF mismatch → 419, no session → 401.
+- `GET /posts/{id}`, `POST /posts`, `PUT/PATCH /posts/{id}`, `DELETE /posts/{id}` — protected post CRUD with the same cookie and CSRF checks. Posts persist in `storage/posts.sqlite` across logins; `title` is required and `status` is `draft` or `published`.
 - `POST /__demo/expire-csrf` — forces a 419 on the next request (to test re-login retry).
 - `POST /__demo/destroy-session` — destroys the session (401).
 

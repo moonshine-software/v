@@ -69,9 +69,11 @@ iterations on a confusing error.
   the agent's cached `tools/list` payload stays on the old shape
   until the MCP connection is re-established. If a param "doesn't
   exist" but this doc mentions it, reconnect first.
-- **`update_resource` is a FULL replace.** It regenerates every page
-  from the passed spec — omitting `fields` wipes them, omitting
-  `filters` wipes them, etc. To preserve what you have: call
+- **`update_resource` replaces the full field spec.** It regenerates every page
+  from the passed spec; omitted `filters` and other generation settings reset.
+  `response_mapping` is the exception: omitting it preserves saved resource
+  overrides; explicit `{}` clears them, and a non-empty object replaces them.
+  To preserve other settings: call
   `get_resource(service, name)` first, merge your change into the
   returned spec, pass the merged spec. A resource without a spec
   sidecar returns `SPEC_MISSING` — reconstruct from the
@@ -293,7 +295,8 @@ conventions the generator expects.
 | `options`    | Static `{"key": "Label"}` map for `select` fields |
 | `endpoint`   | For relation fields (belongs_to, has_many, has_one, belongs_to_many) |
 | `target_service` | Target service for cross-service relation fields/filters. Omit for same-service relations. Keep the parent resource in top-level `service`; relation option loading, has_one/has_many reads, and nested relation actions use the target service config and response mapping. Cross-service has_one/has_many emits field-level `targetService()`/`endpoint()` and does not generate an in-service nested relation resource |
-| `value_key`, `label_key` | Relation field key overrides (default `id` / `name`) |
+| `related_resource` | Existing generated resource name in `target_service` or the same service. Supported by all four REST relation types, filters and per-page field lists. Generate the target first, then link it to inherit its response mapping, including the primary key, detail strategy and envelope. Keep `endpoint` for the relation route. Omitted `value_key` inherits the linked resource primary key; an explicit `value_key` wins. No endpoint-based guessing or extra service/panel is needed. |
+| `value_key`, `label_key` | Relation field key overrides. `value_key` inherits the linked resource primary key (`id` without a link); explicit values win. `label_key` defaults to `name`. |
 | `endpoint_query` | `{param: value}` map attached to every HTTP call this relation field makes (options fetch, has_many list, has_one get). Use for scoped dropdowns that would 422 without a scope param — e.g. `endpoint_query: {"for_entity": "project"}`. Values support `{col}` placeholders that resolve from the parent form's current item + request state at render time (same syntax as `mutations.path`/`mutations.body`), so `endpoint_query: {"project_id": "{project_id}"}` auto-scopes statuses to the saved project on the EDIT page. Placeholders resolving to null/empty are dropped from the query. Pair with `depends_on` for CREATE-mode cascade — see next row. |
 | `depends_on` | `["col1","col2",…]` — sibling columns that drive this relation field's options on CREATE. The dependent field auto-marks itself reactive and MoonShine re-renders it on every form change; the async-search URL carries fresh sibling values through `endpoint_query` placeholders. The driver column (e.g. `project_id`) MUST also be marked reactive via `"methods": ["reactive"]` in its own field spec, otherwise its change won't broadcast. |
 
@@ -315,6 +318,7 @@ drops them with a logged warning:
 | `rules`    | Validation rules for the FormPage. Three shapes: **flat** `{col: "required|string"}` (same for create+update), **per-column per-mode** `{col: {"create": "required|...", "update": "nullable|..."}}` (one column differs, rest shared — use for `password` on user resources), **top-level split** `{"create": {col: "..."}, "update": {col: "..."}}` (fully independent maps). Generator emits one rules() body when create == update, otherwise branches on `$item->getKey() === null`. |
 | `layout`   | Page layout preset. Shape: `{"form": {"type": "box" \| "two-column" \| "tabs", "groups": [{"label": "...", "span": 8, "columns": [...]}]}}`. Default `box` = single `Box::make([...])` wrap (identical to pre-preset output). `tabs` = `Tabs::make([Tab::make(label, [Box::make([...group fields...])])…])`. `two-column` = `Grid::make([Column::make(...)->columnSpan($span)…])`. Columns unlisted in any group fall into the last group so nothing silently drops. For nested layouts (Grid/Column/Box/Tabs via `children`) pass the recursive `layout.form.tree`. |
 | `detail_strategy` (resource-level) | `"endpoint"` or `"list"` override for the service default. Use when one resource in the service has no `GET /{id}` (e.g. Laravel Route::resource for a lookup table exposes only list + CUD). Siblings keep the service-level strategy. Pair with `detail_list_key_param` if the list's filter key differs from `primary_key`. |
+| `response_mapping` | Partial override of the service response mapping for this resource, also accepted by `update_resource`. Use `{data_key:"", pagination_type:"none"}` for a bare array, `{next_cursor_key:"meta.next_cursor"}` for a cursor variant, or `{primary_key:"name"}` for settings. Other mapping keys inherit the service defaults; no extra service or panel is needed. On update, omitting this property preserves saved overrides; explicit `{}` clears them and a non-empty object replaces them. Top-level `detail_strategy` / `detail_list_key_param` take precedence if also supplied. |
 | `actions`  | Allowlist of CRUD abilities the API actually supports. Subset of `["create", "view", "update", "delete", "mass_delete"]`. Omit ones the API lacks. Generator overrides `activeActions()` so unsupported buttons don't render (prevents 405s on unsupported verbs) |
 | `mutations`| Declarative CQRS routing (see below) |
 | `default_query` | `{index: {...}, detail: {...}}` — query params that ride every list / item-detail HTTP call. Use for scoped APIs that demand e.g. `?for_entity=project` to return anything. User filters / sort / search / pagination still override (explicit user choice wins). |

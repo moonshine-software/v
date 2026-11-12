@@ -11,6 +11,7 @@ use App\ApiAdmin\Fields\RestHasOne;
 use App\ApiAdmin\MCP\AtomicFileWriter;
 use App\ApiAdmin\MCP\ServiceRegistry;
 use App\ApiAdmin\MCP\SpecStore\SpecStore;
+use App\ApiAdmin\ServiceConfig\ResponseMapping;
 use App\ApiAdmin\Validation\HostedValidationRules;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -278,6 +279,7 @@ final class ResourceGenerator
         // (or any `{...}`) placeholder in the endpoint. Caller can still force
         // the kind explicitly via `kind` param.
         $kind = is_string($params['kind'] ?? null) ? $params['kind'] : (str_contains($endpoint, '{') ? 'relation' : 'main');
+        $responseMappingPropertyCode = $this->buildResponseMappingProperty($params['response_mapping'] ?? null);
 
         $serviceBaseName = Str::studly($serviceName);
         $registry = new ServiceRegistry;
@@ -389,6 +391,7 @@ final class ResourceGenerator
             '{{ defaultQueryProperty }}',
             '{{ indexRequestProperty }}',
             '{{ detailStrategyOverrideMethod }}',
+            '{{ responseMappingProperty }}',
         ], [
             $resourceNamespace,
             $className,
@@ -406,6 +409,7 @@ final class ResourceGenerator
             $defaultQueryPropertyCode,
             $indexRequestPropertyCode,
             $detailStrategyOverrideCode,
+            $responseMappingPropertyCode,
         ]));
 
         $this->guardAgainstUnreplacedPlaceholders($resourceContent, 'resource.stub');
@@ -762,9 +766,10 @@ final class ResourceGenerator
                 $valueKey = is_string($field['value_key'] ?? null) ? $field['value_key'] : 'id';
                 $labelKey = is_string($field['label_key'] ?? null) ? $field['label_key'] : 'name';
                 $targetService = $this->normalizeRelationTargetService($field, $serviceName);
+                $relatedResource = $this->resolveRelatedResource($field, $serviceName);
 
-                // For has_many/has_one, ensure endpoint uses {parent_id} placeholder
-                if (in_array($type, ['has_many', 'has_one']) && $relEndpoint !== '') {
+                // Inline child resources use nested routes; explicitly linked resources own their routes.
+                if ($relatedResource === null && in_array($type, ['has_many', 'has_one']) && $relEndpoint !== '') {
                     $relEndpoint = $this->ensureParentIdPlaceholder($relEndpoint, $resourceEndpoint, $column);
                 }
 
@@ -784,6 +789,9 @@ final class ResourceGenerator
 
                 if ($relEndpoint !== '') {
                     $line .= "\n                ->endpoint('".$this->escapePhpString($relEndpoint)."')";
+                }
+                if ($relatedResource !== null) {
+                    $line .= "\n                ->relatedResource(\\{$relatedResource}::class)";
                 }
 
                 // Static query params riding every fetch this field does
@@ -829,11 +837,11 @@ final class ResourceGenerator
 
                 // For has_many/has_one with a relation resource, enable CRUD buttons.
                 // Naming follows MoonShine's removable() convention.
-                if ($withCrudButtons && in_array($type, ['has_many', 'has_one'], true) && $hasRelationResource) {
+                if ($withCrudButtons && in_array($type, ['has_many', 'has_one'], true) && ($hasRelationResource || $relatedResource !== null)) {
                     $line .= "\n                ->creatable()\n                ->editable()\n                ->removable()";
                 }
 
-                if ($valueKey !== 'id') {
+                if (is_string($field['value_key'] ?? null) && in_array($type, ['belongs_to', 'belongs_to_many'], true)) {
                     $line .= "->valueKey('".$this->escapePhpString($valueKey)."')";
                 }
 
@@ -878,6 +886,9 @@ final class ResourceGenerator
             $subFields = is_array($field['fields'] ?? null) ? $field['fields'] : [];
             $targetService = $this->normalizeRelationTargetService($field, $serviceName);
             if (! in_array($type, ['has_many', 'has_one'])) {
+                continue;
+            }
+            if (array_key_exists('related_resource', $field)) {
                 continue;
             }
             if ($subFields === []) {
@@ -983,6 +994,7 @@ final class ResourceGenerator
                 '{{ defaultQueryProperty }}',
                 '{{ indexRequestProperty }}',
                 '{{ detailStrategyOverrideMethod }}',
+                '{{ responseMappingProperty }}',
             ], [
                 $resourceNamespace,
                 $className,
@@ -990,6 +1002,7 @@ final class ResourceGenerator
                 $this->escapePhpString($title),
                 $this->escapePhpString($serviceName),
                 $this->escapePhpString($relEndpoint),
+                '',
                 '',
                 '',
                 '',
@@ -1121,9 +1134,13 @@ final class ResourceGenerator
                 if ($relEndpoint !== '') {
                     $line .= "->endpoint('".addslashes($relEndpoint)."')";
                 }
+                $relatedResource = $this->resolveRelatedResource($filter, $serviceName);
+                if ($relatedResource !== null) {
+                    $line .= "->relatedResource(\\{$relatedResource}::class)";
+                }
 
                 $valueKey = is_string($filter['value_key'] ?? null) ? $filter['value_key'] : 'id';
-                if ($valueKey !== 'id') {
+                if (is_string($filter['value_key'] ?? null) && in_array($type, ['belongs_to', 'belongs_to_many'], true)) {
                     $line .= "->valueKey('".addslashes($valueKey)."')";
                 }
 
@@ -1159,6 +1176,28 @@ final class ResourceGenerator
         }
 
         return $targetService;
+    }
+
+    /** @param array<string, mixed> $spec */
+    private function resolveRelatedResource(array $spec, string $sourceService): ?string
+    {
+        if (! array_key_exists('related_resource', $spec)) {
+            return null;
+        }
+        $name = $spec['related_resource'];
+        if (! is_string($name)) {
+            throw new InvalidArgumentException('related_resource must be a registered resource name.');
+        }
+        $this->validateClassName($name);
+        $service = $this->normalizeRelationTargetService($spec, $sourceService) ?? $sourceService;
+        $this->validateClassName($service);
+        $registry = new ServiceRegistry;
+        if ($registry->findResource($service, $name) === null) {
+            throw new InvalidArgumentException("Related resource '{$service}/{$name}' must be generated first.");
+        }
+        $baseName = $registry->resourceBaseName($service, $name);
+
+        return $this->baseNamespaceForPath($registry->resourcesPath()).'\\'.Str::studly($service).'\\'.$baseName.'\\'.$baseName.'Resource';
     }
 
     /**
@@ -1380,6 +1419,46 @@ PHP;
      * @var array<string, array<string, mixed>>
      */
     protected array \$defaultQuery = {$body};
+PHP;
+    }
+
+    private function buildResponseMappingProperty(mixed $mapping): string
+    {
+        if ($mapping === null || $mapping === []) {
+            return '';
+        }
+
+        if (! is_array($mapping)) {
+            throw new InvalidArgumentException('response_mapping must be an object.');
+        }
+
+        $defaults = new ResponseMapping()->toArray();
+        $enums = [
+            'filter_format' => ['nested', 'flat'],
+            'pagination_type' => ['length_aware', 'cursor', 'link_header', 'none'],
+            'detail_strategy' => ['endpoint', 'list'],
+        ];
+        foreach ($mapping as $key => $value) {
+            if (! is_string($key) || ! array_key_exists($key, $defaults)) {
+                throw new InvalidArgumentException('Unknown response_mapping key.');
+            }
+            if (is_bool($defaults[$key]) ? ! is_bool($value) : ! is_string($value)) {
+                throw new InvalidArgumentException("Invalid response_mapping.{$key} value type.");
+            }
+            if (isset($enums[$key]) && ! in_array($value, $enums[$key], true)) {
+                throw new InvalidArgumentException("Invalid response_mapping.{$key} value.");
+            }
+        }
+
+        $body = $this->exportArrayIndented($mapping, 2);
+
+        return <<<PHP
+
+
+    /**
+     * @var array<string, bool|string>
+     */
+    protected array \$responseMapping = {$body};
 PHP;
     }
 

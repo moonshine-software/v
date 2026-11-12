@@ -227,6 +227,19 @@ Create a new REST resource with fields for an existing service.
 | `fields` | array | yes | Field definitions |
 | `search` | array | no | Searchable field column names |
 | `filters` | array | no | Filter field definitions |
+| `response_mapping` | object | no | Partial override of the service mapping for this resource, also accepted by `update_resource`. |
+
+Use `{"data_key":"","pagination_type":"none"}` for a bare-array endpoint,
+`{"next_cursor_key":"meta.next_cursor"}` for a different cursor path, or
+`{"primary_key":"name"}` for settings keyed by name. Unspecified keys inherit
+the service defaults, sibling resources are unchanged, and no extra service or
+panel is needed. Top-level `detail_strategy` / `detail_list_key_param` overrides
+take precedence if also supplied.
+
+`update_resource` preserves saved resource overrides when `response_mapping` is
+omitted. Pass `"response_mapping": {}` to clear them and inherit the service
+mapping, or pass a non-empty object to replace the saved overrides. Other
+generation settings retain full-replace behavior.
 
 ### Field Definition
 
@@ -238,7 +251,8 @@ Create a new REST resource with fields for an existing service.
 | `methods` | array | no | Method chain calls (e.g. `["sortable", "required"]`) |
 | `endpoint` | string | no | API endpoint for relation fields |
 | `target_service` | string | no | Target service for cross-service relation fields. Omit for same-service relations. Relation option loading, has_one/has_many reads, and nested relation actions use the target service config and response mapping. |
-| `value_key` | string | no | Value key for relation fields (default: `id`) |
+| `related_resource` | string | no | Existing generated resource name in `target_service` or the same service. All REST relation types, filters and per-page fields can inherit this resource's response mapping. Generate the target first, and keep `endpoint` for the relation route. |
+| `value_key` | string | no | Value key; inherits the linked resource primary key, or `id` without a link. An explicit value overrides the inherited key. |
 | `label_key` | string | no | Label key for relation fields (default: `name`) |
 
 ### Field Types
@@ -371,7 +385,8 @@ service. Read-only.
 
 Input: `{service, name}`. Returns the spec last used to generate a resource,
 read from `.ai-factory/specs/<service>/<resource>.json`. Call it before
-`update_resource`, which is a full replace. Returns `SPEC_MISSING` when the
+`update_resource` to preserve other generation settings during a full field
+replacement. Omitted `response_mapping` is preserved automatically. Returns `SPEC_MISSING` when the
 sidecar does not exist. Read-only.
 
 ### remove_service

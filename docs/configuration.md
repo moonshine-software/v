@@ -118,6 +118,40 @@ Retry saving the relation after resolving the API error.
 Cursor pagination preserves the current filters, search and sort when advancing,
 and replaces only the configured `cursor_query_param` value.
 
+### Different response formats in one service
+
+Pass a partial `response_mapping` to `create_resource` or `update_resource`.
+Only the specified keys override the service defaults; the service, credentials
+and panel are shared. Keep the mapping from `get_resource` when regenerating a
+resource, since `update_resource` replaces its full specification.
+
+| Resource endpoint | Resource override |
+|---|---|
+| `/tasks` | None, inherits `data` and `cursor.next` |
+| `/transcriptions` | `{"next_cursor_key":"meta.next_cursor"}` |
+| `/notifications` | `{"next_cursor_key":"next_cursor"}` |
+| `/permissions` | `{"data_key":"","pagination_type":"none"}` |
+| `/settings` | `{"primary_key":"name","pagination_type":"none","detail_strategy":"list"}` |
+
+Browser CRUD, MCP reads/writes and analytics use the same effective mapping.
+For a relation pointing at a resource with its own mapping, generate the target
+first and reference it in the field:
+
+```json
+{
+  "column": "setting_name",
+  "type": "belongs_to",
+  "endpoint": "/settings",
+  "related_resource": "setting",
+  "label_key": "label"
+}
+```
+
+The relation inherits the target's envelope, primary key, search parameter and
+detail strategy. Explicit `value_key` and field `dataWrapper()` settings take
+precedence. Without `related_resource`, a field uses the target service defaults;
+the referring resource's overrides do not apply to other endpoints.
+
 ## API Format Examples
 
 ### Laravel / standard
@@ -280,8 +314,8 @@ another registered service:
 The target service is resolved through its `ServiceConfig`, so its base
 URL, auth type, OAuth/session state, retry behavior, and
 `ResponseMapping` are reused. The parent service only supplies the parent
-item and placeholder context. Field-local `dataWrapper()` /
-`data_wrapper` still overrides the target service `dataKey` when a
+item and placeholder context. Use `related_resource` to inherit an existing
+target resource's overrides. Field-local `dataWrapper()` still overrides `dataKey` when a
 single relation endpoint has a different envelope.
 
 Same-service relations should omit `target_service`. Cross-service

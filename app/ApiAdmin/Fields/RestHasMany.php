@@ -8,9 +8,12 @@ use App\ApiAdmin\Fields\Concerns\AsRestRelationField;
 use App\ApiAdmin\Http\PathSegment;
 use App\ApiAdmin\Resources\AbstractRestResource;
 use App\ApiAdmin\Tenancy\TenantRoutes;
+use App\ApiAdmin\Validation\ApiErrorMapper;
 use Closure;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use MoonShine\Contracts\Core\TypeCasts\DataWrapperContract;
 use MoonShine\Contracts\UI\ActionButtonContract;
 use MoonShine\Contracts\UI\ComponentContract;
@@ -56,14 +59,7 @@ class RestHasMany extends Field implements RelationFieldContract
 
     protected string $parentKeyParam = 'parent_id';
 
-    protected ?string $dataWrapper = null;
-
     protected ?AbstractRestResource $parentResource = null;
-
-    protected ?AbstractRestResource $relatedResource = null;
-
-    /** @var class-string<AbstractRestResource>|null */
-    protected ?string $relatedResourceClass = null;
 
     protected int $limit = 25;
 
@@ -244,15 +240,6 @@ class RestHasMany extends Field implements RelationFieldContract
     /**
      * Get or resolve the related resource instance.
      */
-    public function getRelatedResource(): ?AbstractRestResource
-    {
-        if (! $this->relatedResource instanceof AbstractRestResource && $this->relatedResourceClass !== null) {
-            $instance = app($this->relatedResourceClass);
-            $this->relatedResource = $instance instanceof AbstractRestResource ? $instance : null;
-        }
-
-        return $this->relatedResource;
-    }
 
     /**
      * @param array<string, mixed>|null $context
@@ -346,7 +333,8 @@ class RestHasMany extends Field implements RelationFieldContract
         } catch (Throwable $e) {
             Log::error('RestHasMany::loadItems — failed', [
                 'field' => $this->getColumn(),
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
             ]);
 
             return [];
@@ -371,6 +359,25 @@ class RestHasMany extends Field implements RelationFieldContract
             return null;
         }
 
+        $related = $this->getRelatedResource();
+        if ($related?->getDetailStrategy() === 'list'
+            && $related->getServiceConfig()->name === $target->targetService()) {
+            $related->setEndpointOverride($endpoint);
+            $related->setItemID($key);
+
+            try {
+                return $related->findItem(detailQuery: $this->resolveEndpointQuery())?->toArray();
+            } catch (Throwable $e) {
+                Log::warning('[FIX] RestHasMany list lookup failed', [
+                    'field' => $this->getColumn(),
+                    'exception' => $e::class,
+                    'status' => $e instanceof RequestException ? $e->response->status() : null,
+                ]);
+
+                return null;
+            }
+        }
+
         $endpoint = rtrim($endpoint, '/').'/'.PathSegment::encode($key);
 
         try {
@@ -379,7 +386,7 @@ class RestHasMany extends Field implements RelationFieldContract
                 $this->resolveEndpointQuery(),
             );
 
-            if ($response->notFound()) {
+            if (in_array($response->status(), [404, 405], true)) {
                 $member = $this->findItemInLoadedCollection($key);
                 if ($member === null) {
                     return null;
@@ -395,7 +402,8 @@ class RestHasMany extends Field implements RelationFieldContract
             Log::error('RestHasMany::loadSingleItem — failed', [
                 'field' => $this->getColumn(),
                 'key' => $key,
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
             ]);
 
             return null;
@@ -421,20 +429,26 @@ class RestHasMany extends Field implements RelationFieldContract
 
         try {
             $response = $target->httpClient()->post($endpoint, $data);
+            app(ApiErrorMapper::class)->handleResponse($response);
             $response->throw();
 
             $body = $response->json();
 
             if (! is_array($body)) {
-                return null;
+                Log::debug('[FIX] RestHasMany create succeeded without item JSON', ['status' => $response->status()]);
+
+                return $response->successful() ? $data : null;
             }
 
             /** @var array<string, mixed> $body */
             return $body;
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (Throwable $e) {
             Log::error('RestHasMany::createItemForParent — failed', [
                 'field' => $this->getColumn(),
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
             ]);
 
             return null;
@@ -470,20 +484,26 @@ class RestHasMany extends Field implements RelationFieldContract
                     : null;
             }
 
+            app(ApiErrorMapper::class)->handleResponse($response);
             $response->throw();
 
             $body = $response->json();
 
             if (! is_array($body)) {
-                return null;
+                Log::debug('[FIX] RestHasMany update succeeded without item JSON', ['status' => $response->status()]);
+
+                return $response->successful() ? array_replace($data, [$this->getRelationPrimaryKey() => $key]) : null;
             }
 
             /** @var array<string, mixed> $body */
             return $body;
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (Throwable $e) {
             Log::error('RestHasMany::updateItemForParent — failed', [
                 'field' => $this->getColumn(),
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
             ]);
 
             return null;
@@ -518,7 +538,8 @@ class RestHasMany extends Field implements RelationFieldContract
         } catch (Throwable $e) {
             Log::error('RestHasMany::deleteItemForParent — failed', [
                 'field' => $this->getColumn(),
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
             ]);
 
             return false;
@@ -608,7 +629,7 @@ class RestHasMany extends Field implements RelationFieldContract
                     '_resource' => $this->getParentResourceUri(),
                     '_relation' => $this->getColumn(),
                     '_parent_id' => $this->getParentId(),
-                    '_key' => data_get($data, 'id'),
+                    '_key' => data_get($data, $this->getRelationPrimaryKey()),
                 ]),
             )
                 ->icon('pencil')
@@ -618,7 +639,7 @@ class RestHasMany extends Field implements RelationFieldContract
                     title: __('moonshine::ui.edit'),
                     content: '',
                     name: function (mixed $data): string {
-                        $id = data_get($data, 'id');
+                        $id = data_get($data, $this->getRelationPrimaryKey());
 
                         return 'rest-has-many-edit-'.$this->getColumn().'-'.(is_scalar($id) ? (string) $id : '');
                     },
@@ -633,7 +654,7 @@ class RestHasMany extends Field implements RelationFieldContract
                     '_resource' => $this->getParentResourceUri(),
                     '_relation' => $this->getColumn(),
                     '_parent_id' => $this->getParentId(),
-                    '_key' => data_get($data, 'id'),
+                    '_key' => data_get($data, $this->getRelationPrimaryKey()),
                 ]),
             )
                 ->icon('trash')
@@ -761,7 +782,7 @@ class RestHasMany extends Field implements RelationFieldContract
             }
         }
 
-        $id = $item['id'] ?? null;
+        $id = data_get($item, $this->getRelationPrimaryKey());
         if (is_scalar($id)) {
             return '#'.$id;
         }
@@ -783,7 +804,7 @@ class RestHasMany extends Field implements RelationFieldContract
         $items = $this->loadItems();
 
         foreach ($items as $item) {
-            $id = data_get($item, 'id');
+            $id = data_get($item, $this->getRelationPrimaryKey());
             if (is_scalar($id) && (string) $id === (string) $key) {
                 return $item;
             }
@@ -840,12 +861,17 @@ class RestHasMany extends Field implements RelationFieldContract
      */
     private function extractSingleItemFromResponse(mixed $json, string|int $key, ?string $wrapperKey = null): ?array
     {
-        $wrapperKey ??= $this->dataWrapper
-            ?? $this->parentResource?->getServiceConfig()->responseMapping->dataKey;
+        $wrapperKey ??= $this->getRelationTarget()?->dataWrapper();
 
         $item = data_get($json, $wrapperKey, $json);
 
         if (is_array($item) && $this->isAssocArray($item)) {
+            $primaryKey = $this->getRelationPrimaryKey();
+            $itemKey = data_get($item, $primaryKey);
+            if (! is_scalar($itemKey) || (string) $itemKey !== (string) $key) {
+                return null;
+            }
+
             /** @var array<string, mixed> $itemAssoc */
             $itemAssoc = $item;
 
@@ -857,7 +883,7 @@ class RestHasMany extends Field implements RelationFieldContract
                 if (! is_array($row)) {
                     continue;
                 }
-                $rowId = data_get($row, 'id');
+                $rowId = data_get($row, $this->getRelationPrimaryKey());
                 if (is_scalar($rowId) && (string) $rowId === (string) $key) {
                     /** @var array<string, mixed> $rowAssoc */
                     $rowAssoc = $row;
@@ -898,7 +924,8 @@ class RestHasMany extends Field implements RelationFieldContract
             Log::debug('RestHasMany::loadSingleItemFromRelatedResource — failed', [
                 'field' => $this->getColumn(),
                 'key' => $key,
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
             ]);
 
             return null;
@@ -924,6 +951,7 @@ class RestHasMany extends Field implements RelationFieldContract
                 return null;
             }
 
+            app(ApiErrorMapper::class)->handleResponse($response);
             $response->throw();
 
             $payload = $response->json();
@@ -934,16 +962,19 @@ class RestHasMany extends Field implements RelationFieldContract
             }
 
             if (! is_array($payload)) {
-                return null;
+                return $response->successful() ? array_replace($data, [$this->getRelationPrimaryKey() => $key]) : null;
             }
 
             /** @var array<string, mixed> $payload */
             return $payload;
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (Throwable $e) {
             Log::debug('RestHasMany::updateItemUsingRelatedResource — failed', [
                 'field' => $this->getColumn(),
                 'key' => $key,
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
             ]);
 
             return null;
@@ -969,7 +1000,8 @@ class RestHasMany extends Field implements RelationFieldContract
             Log::debug('RestHasMany::deleteItemUsingRelatedResource — failed', [
                 'field' => $this->getColumn(),
                 'key' => $key,
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null,
             ]);
 
             return false;

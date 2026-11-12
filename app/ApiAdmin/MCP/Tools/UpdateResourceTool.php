@@ -7,6 +7,7 @@ namespace App\ApiAdmin\MCP\Tools;
 use App\ApiAdmin\MCP\Generator\ResourceGenerator;
 use App\ApiAdmin\MCP\Generator\ResourceValidator;
 use App\ApiAdmin\MCP\ServiceRegistry;
+use App\ApiAdmin\MCP\SpecStore\SpecStore;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -21,8 +22,8 @@ use Throwable;
  * directory.
  *
  * The generator is idempotent (stubs get overwritten cleanly), so this tool
- * effectively does "replace all fields with the new list". Partial deltas
- * (add_field / remove_field) are a future P2 — they need a PHP parser.
+ * replaces fields and other submitted generation settings. The saved
+ * response_mapping is retained when omitted; an explicit mapping replaces it.
  */
 final class UpdateResourceTool implements ToolContract
 {
@@ -31,9 +32,13 @@ final class UpdateResourceTool implements ToolContract
      */
     public static function schema(): array
     {
+        $mapping = CreateResourceTool::schema()['inputSchema']['properties']['response_mapping'] ?? [];
+        $mapping = is_array($mapping) ? $mapping : [];
+        $mapping['description'] = 'Partial override of the service response mapping. Omit to preserve the resource\'s saved overrides. An explicit empty object {} clears overrides and inherits the service mapping. A non-empty object replaces the saved overrides; omitted keys then inherit from the service.';
+
         return [
             'name' => 'update_resource',
-            'description' => 'Generation changes are serialized and rolled back on failure. Regenerate an existing resource with a new fields spec. Same shape as create_resource but requires the resource to already exist. Use this to add/remove/reorder fields without touching source files.',
+            'description' => 'Generation changes are serialized and rolled back on failure. Regenerate an existing resource with a new fields spec. Same shape as create_resource but requires the resource to already exist. Omitted response_mapping preserves saved resource overrides; explicit {} clears them. Other fields/settings retain full-replace semantics.',
             'inputSchema' => [
                 'type' => 'object',
                 'properties' => [
@@ -56,6 +61,7 @@ final class UpdateResourceTool implements ToolContract
                     'actions' => CreateResourceTool::schema()['inputSchema']['properties']['actions'] ?? null,
                     'default_query' => CreateResourceTool::schema()['inputSchema']['properties']['default_query'] ?? null,
                     'list_request' => CreateResourceTool::schema()['inputSchema']['properties']['list_request'] ?? null,
+                    'response_mapping' => $mapping,
                     'mutations' => CreateResourceTool::schema()['inputSchema']['properties']['mutations'] ?? null,
                     'layout' => CreateResourceTool::schema()['inputSchema']['properties']['layout'] ?? null,
                     'detail_strategy' => CreateResourceTool::schema()['inputSchema']['properties']['detail_strategy'] ?? null,
@@ -148,6 +154,18 @@ final class UpdateResourceTool implements ToolContract
         // Regenerating a relation-only resource (endpoint has `{parent_id}`) with the
         // main stub would re-introduce the panel+group + standalone-URL-500 bug.
         $params['kind'] ??= $match['kind'] ?? 'main';
+
+        if (! array_key_exists('response_mapping', $params)) {
+            $saved = SpecStore::read($service, $name);
+            if (is_array($saved['response_mapping'] ?? null)) {
+                $params['response_mapping'] = $saved['response_mapping'];
+                Log::debug('[FIX] UpdateResourceTool: preserved response mapping', [
+                    'service' => $service,
+                    'name' => $name,
+                    'mapping_keys' => array_keys($params['response_mapping']),
+                ]);
+            }
+        }
 
         Log::info('UpdateResourceTool: regenerating', [
             'service' => $service,

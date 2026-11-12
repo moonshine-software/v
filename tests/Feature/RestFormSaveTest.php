@@ -91,6 +91,23 @@ final class RestFormSaveTest extends TestCase
         Http::assertSent(static fn (Request $request): bool => $request->method() === 'PUT' && $request->url() === 'https://form-save.test/posts/7/tags');
     }
 
+    public function test_ajax_form_maps_upstream_validation_to_field_errors(): void
+    {
+        $this->actingAs(new MoonshineUser(['id' => 1]), 'moonshine');
+        moonshine()->resources([RestFormSaveResource::class]);
+        Http::fake(static fn (Request $request) => $request->method() === 'PUT'
+            ? Http::response(['errors' => ['title' => ['Choose another title.']]], 422)
+            : Http::response(['data' => ['id' => 7, 'title' => 'Original']]));
+
+        $this->withHeader('X-Requested-With', 'XMLHttpRequest')
+            ->putJson('/admin/resource/rest-form-save-resource/crud/7', ['title' => 'Rejected'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+
+        Http::assertNotSent(static fn (Request $request): bool => $request->method() === 'PUT'
+            && str_ends_with($request->url(), '/tags'));
+    }
+
     /** @return iterable<string, array{string, bool}> */
     public static function relationFailures(): iterable
     {

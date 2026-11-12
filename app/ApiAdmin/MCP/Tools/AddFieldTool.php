@@ -62,7 +62,8 @@ final class AddFieldTool implements ToolContract
                                 'type' => 'string',
                                 'description' => 'Target service name for cross-service relation fields. Omit for same-service relations.',
                             ],
-                            'value_key' => ['type' => 'string', 'description' => 'Value key for relation fields (default: id)'],
+                            'related_resource' => ['type' => 'string', 'description' => 'Existing generated REST resource name in target_service or the same service; inherits its response mapping. Generate the target first.'],
+                            'value_key' => ['type' => 'string', 'description' => 'Value key for relation fields; inherits related_resource primary key, or id without a link. An explicit value overrides the inherited key.'],
                             'label_key' => ['type' => 'string', 'description' => 'Label key for relation fields (default: name)'],
                             'endpoint_query' => ['type' => 'object', 'description' => 'Static query params attached to this relation field calls'],
                             'depends_on' => [

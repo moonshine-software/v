@@ -36,9 +36,10 @@ final readonly class RestRelationTarget
         AbstractRestResource $parentResource,
         ?string $targetService = null,
         ?string $dataWrapper = null,
+        ?AbstractRestResource $relatedResource = null,
     ): ?self {
         try {
-            $sourceConfig = $parentResource->getServiceConfig();
+            $sourceConfig = $parentResource->getBaseServiceConfig();
             $sourceService = $sourceConfig->name;
             $normalizedTarget = self::normalizeTargetService($targetService);
             $usesParentClient = $normalizedTarget === null || $normalizedTarget === $sourceService;
@@ -47,6 +48,20 @@ final readonly class RestRelationTarget
                 ? $sourceConfig
                 : ApiAdminServiceProvider::resolveService($normalizedTarget);
 
+            $usesRelatedMapping = false;
+            if ($relatedResource instanceof AbstractRestResource) {
+                $relatedConfig = $relatedResource->getServiceConfig();
+                if ($relatedConfig->name === $serviceConfig->name && $relatedConfig->tenantId === $serviceConfig->tenantId) {
+                    $usesRelatedMapping = true;
+                    $serviceConfig = ServiceConfig::fromArray(array_replace($serviceConfig->toArray(), [
+                        'response_mapping' => array_replace($relatedConfig->responseMapping->toArray(), [
+                            'detail_strategy' => $relatedResource->getDetailStrategy(),
+                            'detail_list_key_param' => $relatedResource->getDetailListKeyParam(),
+                        ]),
+                    ]));
+                }
+            }
+
             $wrapper = $dataWrapper ?? $serviceConfig->responseMapping->dataKey;
 
             Log::debug('RestRelationTarget::resolve — relation target resolved', [
@@ -54,6 +69,7 @@ final readonly class RestRelationTarget
                 'target_service' => $serviceConfig->name,
                 'data_wrapper' => $wrapper,
                 'uses_parent_client' => $usesParentClient,
+                'uses_related_mapping' => $usesRelatedMapping,
             ]);
 
             return new self(
@@ -69,7 +85,6 @@ final readonly class RestRelationTarget
                 'source_resource' => $parentResource::class,
                 'target_service' => $targetService,
                 'exception' => $e::class,
-                'message' => $e->getMessage(),
             ]);
 
             return null;
@@ -78,7 +93,6 @@ final readonly class RestRelationTarget
                 'source_resource' => $parentResource::class,
                 'target_service' => $targetService,
                 'exception' => $e::class,
-                'message' => $e->getMessage(),
             ]);
 
             return null;
