@@ -19,7 +19,7 @@ A free, MIT-licensed Laravel application that provides an AI-driven admin panel 
 ## Tech Stack
 - **Language:** PHP 8.5
 - **Framework:** Laravel 13
-- **Admin Panel:** MoonShine 5, `5.x-dev` pinned in `composer.lock` (REST resources are CrudResource-based; local services use ModelResource)
+- **Admin Panel:** MoonShine 5, `^5.0`, exact release pinned in `composer.lock` (REST resources are CrudResource-based; local services use ModelResource)
 - **Database:** SQLite for source development; PostgreSQL + Redis in installer and production stacks (admin panel metadata only)
 - **Frontend:** Tailwind CSS 4, Vite 8 (MoonShine built-in UI)
 - **Testing:** PHPUnit 12

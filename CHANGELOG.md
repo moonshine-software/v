@@ -14,12 +14,15 @@ Notable changes to MoonShine V. The project follows [Semantic Versioning](https:
 - Cross-platform Docker installer with MCP client setup, persistent generated state and backup/restore scripts.
 - Signed upstream webhooks and browser refresh integration through Laravel broadcasting.
 
+### Changed
+
+- Use stable MoonShine releases (`^5.0`), starting with `5.0.0` pinned in `composer.lock`.
+
 ### Security
 
 - Require probe permission and `tools:data:write` (or `*` / `tools:*`) for hosted POST probes. Read-only and individual item-write grants cannot authorize arbitrary POST requests through `probe_endpoint`.
 
 ### Known limitations
 
-- MoonShine uses `5.x-dev`, pinned to an exact commit in `composer.lock`; install from the lock file.
 - Hosted service and panel names must be unique across the installation. Custom PHP/Blade extensions and Eloquent generation are available only in trusted local mode.
 - Public deployments require separately configured HTTPS ingress, secrets and off-host backups; the interactive installer serves local loopback HTTP.

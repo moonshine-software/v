@@ -21,7 +21,7 @@
         "php": "^8.5",
         "laravel/framework": "^13.0",
         "laravel/tinker": "^3.0",
-        "moonshine/moonshine": "5.x-dev",
+        "moonshine/moonshine": "^5.0",
         "moonshine/multi-panels": "^1.0"
     },
     "require-dev": {

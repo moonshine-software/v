@@ -2,7 +2,7 @@
 
 Background references collected while designing MoonShine V. They describe the
 upstream packages as studied on 2026-03-27, mostly for MoonShine 4.x, and are
-kept as design history. The project now runs on MoonShine 5 (`5.x-dev`, pinned
+kept as design history. The project now runs on MoonShine 5 (`^5.0`, exact release pinned
 in `composer.lock`): when a reference disagrees with the code in `app/`, the
 installed sources in `vendor/` or `AGENTS.md`, those win.
 

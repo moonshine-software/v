@@ -8,7 +8,7 @@ Connect a REST API, describe its resources, and generate a MoonShine admin UI wi
 
 ![A generated Blog panel: a post with BelongsTo, HasMany, HasOne and BelongsToMany relations loaded over HTTP](docs/images/rest-panel.png)
 
-Free and MIT-licensed. Built on **PHP 8.5, Laravel 13 and MoonShine 5**. MoonShine currently uses the `5.x-dev` branch, with an exact commit pinned in `composer.lock`. Review the [release checks](docs/release-readiness.md) and [production guide](docs/production.md) before deploying publicly.
+Free and MIT-licensed. Built on **PHP 8.5, Laravel 13 and MoonShine 5**. MoonShine uses stable releases (`^5.0`), with an exact version pinned in `composer.lock`. Review the [release checks](docs/release-readiness.md) and [production guide](docs/production.md) before deploying publicly.
 
 ## Quick Start
 

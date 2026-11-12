@@ -20,7 +20,7 @@
 - [x] **Cross-Service Relations** — `RestBelongsTo` / `RestHasMany` walking across registered services (distributed entity on one detail page)
 - [x] **Hosted Edition** — hosted moonshine-v, tenant-isolated, `.mcp.json` only on developer side
 - [x] **Local Eloquent Services** — `initialize_local_service` + `create_model_resource` for models in the same application
-- [x] **MoonShine 5 Migration** — `5.x-dev` core, production Compose profile, backups, release hardening
+- [x] **MoonShine 5 Migration** — stable `^5.0` core, production Compose profile, backups, release hardening
 - [x] **Interactive Installer** — one-command cross-platform setup with MCP client selection
 
 ## Completed

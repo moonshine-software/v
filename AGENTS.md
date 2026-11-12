@@ -10,7 +10,7 @@ MoonShine V (`moonshine-v`) is a free, MIT-licensed admin panel generator: an AI
 
 - **Language:** PHP 8.5
 - **Framework:** Laravel 13
-- **Admin Panel:** MoonShine 5 (`5.x-dev`, exact commit pinned in `composer.lock`)
+- **Admin Panel:** MoonShine 5 (`^5.0`, exact release pinned in `composer.lock`)
 - **Database:** SQLite for source development; PostgreSQL + Redis in the installer and production stacks
 - **Frontend:** Tailwind CSS 4, Vite 8
 - **Testing:** PHPUnit 12, `node --test` for the installer
@@ -427,7 +427,7 @@ The repository has no generated services: every developer deploys the project an
 
 ## MCP tools (the surface for an external AI agent)
 
-The core is MoonShine `5.x-dev`, exact commit in `composer.lock`. `create_resource` / `update_resource` generate a list page based on `RestIndexPage`: `filters()` and `getFilters()` belong to the page, not the resource. This contract is kept in sync with the tool schema, tests, `LLMS.txt` and `McpServerCommand::agentInstructions()` under the common sync rule.
+The core is MoonShine `^5.0`, exact release in `composer.lock`. `create_resource` / `update_resource` generate a list page based on `RestIndexPage`: `filters()` and `getFilters()` belong to the page, not the resource. This contract is kept in sync with the tool schema, tests, `LLMS.txt` and `McpServerCommand::agentInstructions()` under the common sync rule.
 
 Moonshine-v is a free Docker product. A developer starts the container and, from their Claude Code over MCP, builds admin panels over REST APIs or local Eloquent models without looking at moonshine-v code. In local/self-hosted mode operations go through the stdio MCP server: `php artisan api-admin:mcp-server`. In hosted mode the client connects to an HTTPS Streamable HTTP MCP endpoint with a tenant-bound bearer token; token scopes (`tools:read`, `tools:generate`, `tools:data:read`, `tools:data:write`, `tools:destructive`) grant access only to tool families, and `McpAuthorizationGate` still cuts off cross-tenant service/resource access before dispatch. Operators provision hosted access with `api-admin:tenant` (create, rename, list, `--activate`/`--deactivate`), `api-admin:tenant-member` and `api-admin:mcp-token` (issue with explicit `--scope`, `--list`, `--revoke`); tokens are printed once and stored as SHA-256 hashes, and `McpAuthorizationGate::isKnownScope()` is the scope allowlist. There is deliberately no MCP tool for tenants or tokens. Hosted `register_service` stores `api_key`, `oauth_client_secret`, delegated OAuth/session secrets and `webhook_secret` through the tenant-scoped `TenantSecretStore`; `.env` and literal secret fallbacks remain only for local/self-hosted mode.
 
