@@ -113,7 +113,10 @@ test('resume preserves encryption keys, passwords and project identity; missing 
     const root = path.join(temporary(t), 'installation');
     const tools = { git: 'git', docker: 'docker', context: 'desktop-linux' };
     const run = (command, args) => {
-        if (args.includes('clone')) mkdirSync(root);
+        if (args.includes('clone')) {
+            assert.equal(args[args.indexOf('--branch') + 1], 'v1.0.0');
+            mkdirSync(root);
+        }
         return args.includes('rev-parse') ? 'abcdef123456' : '';
     };
     const state = initializeInstallation(root, 8080, tools, run);
@@ -137,6 +140,7 @@ test('existing unrelated directories are never repurposed', t => {
 test('source download uses public HTTPS and reports access failures without switching to SSH', () => {
     assert.equal(repositoryAccess('git', (command, args, options) => {
         assert.ok(args.includes('ls-remote'));
+        assert.equal(args.at(-1), 'refs/tags/v1.0.0');
         assert.equal(options.environment.GIT_TERMINAL_PROMPT, '0');
         return 'commit HEAD';
     }), 'https://github.com/moonshine-software/v.git');

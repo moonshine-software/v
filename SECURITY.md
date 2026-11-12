@@ -2,10 +2,10 @@
 
 ## Supported code
 
-Report vulnerabilities against the current `main` branch and include the exact
-commit or image digest. Use committed lock files; MoonShine is pinned to a
-development commit. Older source snapshots are not maintained as separate
-security branches.
+Report vulnerabilities against the latest `1.x` release or current `main`
+branch and include the exact version, commit or image digest. Use committed
+lock files; MoonShine is pinned to a stable release. Older releases are not
+maintained as separate security branches.
 
 ## Reporting a vulnerability
 

@@ -9,6 +9,7 @@ import { pathToFileURL } from 'node:url';
 import { createServer } from 'node:net';
 
 const REPOSITORY = 'https://github.com/moonshine-software/v.git';
+const SOURCE_REF = 'v1.0.0';
 const STATE_DIR = '.moonshine-install';
 const CLIENTS = ['Claude Code', 'Codex', 'Cursor', 'Gemini CLI', 'Windsurf'];
 
@@ -186,7 +187,7 @@ export function checkPrerequisites(run = execute) {
 }
 
 export function repositoryAccess(git, run = execute) {
-    run(git, ['-c', 'credential.interactive=false', 'ls-remote', '--exit-code', REPOSITORY, 'HEAD'], {
+    run(git, ['-c', 'credential.interactive=false', 'ls-remote', '--exit-code', REPOSITORY, `refs/tags/${SOURCE_REF}`], {
         capture: true, timeout: 30000, environment: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
     });
     return REPOSITORY;
@@ -204,7 +205,7 @@ export function initializeInstallation(root, port, tools, run = execute) {
     }
     if (existsSync(root)) throw new Error('The installation directory already exists. Choose a new directory, or an installation created by this wizard.');
     const repository = repositoryAccess(tools.git, run);
-    run(tools.git, ['-c', 'core.autocrlf=false', 'clone', '--depth', '1', '--', repository, root]);
+    run(tools.git, ['-c', 'core.autocrlf=false', 'clone', '--depth', '1', '--branch', SOURCE_REF, '--', repository, root]);
     const commit = run(tools.git, ['-C', root, 'rev-parse', 'HEAD'], { capture: true });
     const id = randomBytes(5).toString('hex');
     const state = { version: 1, root: realpathSync(root), context: tools.context, port, commit, project: `moonshine-${id}`, adminCreated: false };

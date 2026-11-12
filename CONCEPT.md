@@ -83,7 +83,7 @@ This is the most frequent scenario: the API changes, requirements grow, and the 
 
 ```
 # 1. Start the product (one command)
-npx --yes --package=https://github.com/moonshine-software/v/archive/refs/heads/main.tar.gz moonshine-v-install
+npx --yes --package=https://github.com/moonshine-software/v/archive/refs/tags/v1.0.0.tar.gz moonshine-v-install
 
 # 2. The installer connects your MCP client
 # (a template for manual setup ships as .mcp.json.example)

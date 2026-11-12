@@ -2,7 +2,7 @@
 
 Notable changes to MoonShine V. The project follows [Semantic Versioning](https://semver.org/) from its first tagged release.
 
-## 0.1.0 — Unreleased
+## 1.0.0 — 2026-11-12
 
 ### Added
 
@@ -17,6 +17,7 @@ Notable changes to MoonShine V. The project follows [Semantic Versioning](https:
 ### Changed
 
 - Use stable MoonShine releases (`^5.0`), starting with `5.0.0` pinned in `composer.lock`.
+- Install the `v1.0.0` source tag through the interactive installer instead of the moving `main` branch.
 
 ### Security
 

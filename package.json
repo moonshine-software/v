@@ -1,7 +1,7 @@
 {
     "$schema": "https://www.schemastore.org/package.json",
     "name": "moonshine-v",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "description": "Interactive installer and frontend build for MoonShine V, an MCP-driven admin panel for REST APIs.",
     "license": "MIT",
     "repository": {

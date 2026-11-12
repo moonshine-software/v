@@ -23,7 +23,7 @@ containers. The first image build can take several minutes.
 ## Run the Wizard
 
 ```sh
-npx --yes --package=https://github.com/moonshine-software/v/archive/refs/heads/main.tar.gz moonshine-v-install
+npx --yes --package=https://github.com/moonshine-software/v/archive/refs/tags/v1.0.0.tar.gz moonshine-v-install
 ```
 
 If Windows PowerShell blocks `npx.ps1` under its execution policy, use `npx.cmd`
@@ -47,7 +47,7 @@ The wizard asks for:
 4. Confirmation of the directory, Docker context and selected clients.
 5. Administrator username/email, name and password after the stack is healthy.
 
-It clones the repository, records the source commit, builds matching app/web
+It clones the `v1.0.0` release tag, records the source commit, builds matching app/web
 images, creates unique encryption/database/Redis secrets, runs migrations, starts
 the stack and verifies the MCP handshake and generation tool list. Open the
 printed `/admin` URL and sign in. Use **Add service** or the connected agent to

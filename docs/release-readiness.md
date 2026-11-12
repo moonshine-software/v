@@ -7,15 +7,15 @@ in production. This does not replace checking your own infrastructure.
 
 ## Status
 
-No release has been tagged yet. Before tagging a release:
+`1.0.0` is the first stable release. Before tagging each release:
 
-- Recheck the pinned MoonShine commit if upstream has changed.
+- Recheck the pinned MoonShine release if upstream has changed.
 - Verify the anonymous `npx` installation and private vulnerability reporting from a clean environment.
 - Run every check in [Automated checks](#automated-checks) on the commit being tagged.
 
 ## Core and compatibility
 
-`moonshine/moonshine` follows the [development branch `5.x`](https://github.com/moonshine-software/moonshine/tree/5.x), and the exact commit is pinned in `composer.lock`. MoonShine 5 has no tagged release yet, so install with `composer install` and never with a floating `composer update`.
+`moonshine/moonshine` uses stable `^5.0` releases, starting with `5.0.0` pinned in `composer.lock`. Install with `composer install` to use the tested dependency versions.
 
 `moonshine/multi-panels` uses the published `1.0.0`, which supports MoonShine 4.4+ and 5.x. Index pages and the generation stub use `RestIndexPage`: filters belong to the page, and relation filters receive their parent resource.
 
